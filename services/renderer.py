@@ -195,37 +195,55 @@ def _render_slide_image(
     else:
         # Renderização padrão (sem imagem de fundo)
         text_color = palette["text"]
+        headline_font = _get_font(80, bold=True)
+        body_font = _get_font(48)
+
+        # Calcular altura total do conteúdo para centralizar verticalmente
+        avg_char_w = headline_font.getlength("A")
+        chars_per_line = max(1, int(content_width / avg_char_w))
+        headline_lines = textwrap.wrap(slide.headline.upper(), width=chars_per_line) or [""]
+        h_line_h = headline_font.getbbox("A")[3] - headline_font.getbbox("A")[1]
+        total_headline_h = len(headline_lines) * (h_line_h + 16)
+
+        total_body_h = 0
+        if slide.body:
+            avg_bw = body_font.getlength("A")
+            b_chars = max(1, int(content_width / avg_bw))
+            body_lines = textwrap.wrap(slide.body, width=b_chars) or [""]
+            b_line_h = body_font.getbbox("A")[3] - body_font.getbbox("A")[1]
+            total_body_h = len(body_lines) * (b_line_h + 12) + 40
+
+        total_content_h = total_headline_h + total_body_h + 40  # 40 for accent line
+        start_y = max(margin_top, (height - total_content_h) // 2 - 40)
 
         # Accent line
         draw.rectangle(
-            [margin_x, margin_top, margin_x + 60, margin_top + 5],
+            [margin_x, start_y, margin_x + 80, start_y + 6],
             fill=palette["accent"],
         )
 
         # Headline
-        headline_font = _get_font(56, bold=True)
-        y_pos = margin_top + 30
+        y_pos = start_y + 35
         y_pos = _draw_text_wrapped(
             draw, slide.headline.upper(),
             margin_x, y_pos,
             content_width,
-            headline_font, text_color, line_spacing=14,
+            headline_font, text_color, line_spacing=16,
         )
 
         # Body
         if slide.body:
-            body_font = _get_font(38)
-            y_pos += 30
+            y_pos += 40
             _draw_text_wrapped(
                 draw, slide.body,
                 margin_x, y_pos,
                 content_width,
-                body_font, text_color, line_spacing=10,
+                body_font, text_color, line_spacing=12,
             )
 
         # Slide type badge (hook, cta, etc.)
         if slide.slide_type in ("hook", "cta"):
-            badge_font = _get_font(24)
+            badge_font = _get_font(28)
             badge_text = slide.slide_type.upper()
             draw.text(
                 (margin_x, height - 80),
