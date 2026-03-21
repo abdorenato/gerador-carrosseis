@@ -174,6 +174,58 @@ def _row_to_offer(row) -> Offer:
     )
 
 
+# ── Ideas ─────────────────────────────────────────────────────────────────
+
+def save_ideas(conn: Connection, icp_id: int, ideas: list[dict], offer_id: int | None = None) -> None:
+    """Salva uma lista de ideias geradas no banco."""
+    for idea in ideas:
+        conn.execute(
+            """INSERT INTO ideas (icp_id, offer_id, topic, hook, angle, target_emotion, carousel_style)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (
+                icp_id,
+                offer_id,
+                idea.get("topic", ""),
+                idea.get("hook", ""),
+                idea.get("angle", ""),
+                idea.get("target_emotion", ""),
+                idea.get("carousel_style", ""),
+            ),
+        )
+    conn.commit()
+
+
+def list_ideas_by_icp(conn: Connection, icp_id: int, offer_id: int | None = None) -> list[dict]:
+    """Lista ideias filtradas por ICP e opcionalmente por oferta."""
+    if offer_id:
+        rows = conn.execute(
+            "SELECT * FROM ideas WHERE icp_id = ? AND offer_id = ? ORDER BY created_at DESC",
+            (icp_id, offer_id),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM ideas WHERE icp_id = ? ORDER BY created_at DESC",
+            (icp_id,),
+        ).fetchall()
+    return [
+        {
+            "id": r["id"],
+            "topic": r["topic"],
+            "hook": r["hook"],
+            "angle": r["angle"],
+            "target_emotion": r["target_emotion"],
+            "carousel_style": r["carousel_style"],
+            "offer_id": r["offer_id"],
+        }
+        for r in rows
+    ]
+
+
+def delete_idea(conn: Connection, idea_id: int) -> None:
+    conn.execute("DELETE FROM ideas WHERE id = ?", (idea_id,))
+    conn.commit()
+
+
 # ── Instagram Posts ──────────────────────────────────────────────────────
 
 def upsert_post(conn: Connection, post: InstagramPost) -> None:

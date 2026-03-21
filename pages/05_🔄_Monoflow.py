@@ -58,26 +58,47 @@ st.subheader("1️⃣ Ideia")
 
 idea_source = st.radio(
     "Origem da ideia",
-    ["Ideias geradas", "Escrever manualmente"],
+    ["Banco de ideias", "Escrever manualmente"],
     horizontal=True,
 )
 
 idea = None
 
-if idea_source == "Ideias geradas":
-    generated = st.session_state.get("generated_ideas", [])
+if idea_source == "Banco de ideias":
+    # Carregar ideias do banco filtradas por ICP e oferta
+    offer_filter_id = offer.id if offer else None
+    saved_ideas = repo.list_ideas_by_icp(conn, selected_icp_id, offer_filter_id)
+
+    # Se não encontrou com filtro de oferta, tenta sem
+    if not saved_ideas and offer_filter_id:
+        saved_ideas = repo.list_ideas_by_icp(conn, selected_icp_id)
+        if saved_ideas:
+            st.caption("Mostrando todas as ideias do ICP (nenhuma específica para esta oferta)")
+
+    # Também verificar session_state (ideias recém-geradas)
     monoflow_idea = st.session_state.get("monoflow_idea")
 
     if monoflow_idea:
-        st.success(f"Ideia selecionada: **{monoflow_idea.get('topic', '')}**")
+        st.success(f"Ideia pré-selecionada: **{monoflow_idea.get('topic', '')}**")
         idea = monoflow_idea
-    elif generated:
-        idea_titles = [f"{i+1}. {idea['topic']}" for i, idea in enumerate(generated)]
-        sel = st.selectbox("Escolha uma ideia", idea_titles)
-        idx = idea_titles.index(sel)
-        idea = generated[idx]
+        if st.button("Limpar seleção"):
+            del st.session_state["monoflow_idea"]
+            st.rerun()
+    elif saved_ideas:
+        idea_titles = [f"{i.get('topic', 'Sem tema')}" for i in saved_ideas]
+        sel_idx = st.selectbox(
+            f"Escolha uma ideia ({len(saved_ideas)} disponíveis)",
+            range(len(idea_titles)),
+            format_func=lambda x: idea_titles[x],
+        )
+        idea = saved_ideas[sel_idx]
+        with st.expander("Detalhes da ideia"):
+            st.markdown(f"**Hook:** {idea.get('hook', '-')}")
+            st.markdown(f"**Ângulo:** {idea.get('angle', '-')}")
+            st.markdown(f"**Emoção:** {idea.get('target_emotion', '-')}")
+            st.markdown(f"**Estilo:** {idea.get('carousel_style', '-')}")
     else:
-        st.info("Nenhuma ideia gerada. Vá para a página **Ideas** ou escreva manualmente.")
+        st.info("Nenhuma ideia salva para este ICP. Vá para **Ideas** para gerar ou escreva manualmente.")
 else:
     topic = st.text_input("Tema", placeholder="Ex: 5 erros que matam sua produtividade")
     hook = st.text_input("Hook", placeholder="Ex: Você está sabotando seu próprio sucesso...")

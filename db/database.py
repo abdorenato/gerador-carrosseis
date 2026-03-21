@@ -104,6 +104,22 @@ def init_db() -> None:
             FOREIGN KEY (icp_id) REFERENCES icps(id)
         );
 
+        CREATE TABLE IF NOT EXISTS ideas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            icp_id INTEGER NOT NULL,
+            offer_id INTEGER,
+            topic TEXT NOT NULL,
+            hook TEXT NOT NULL,
+            angle TEXT DEFAULT '',
+            target_emotion TEXT DEFAULT '',
+            carousel_style TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (icp_id) REFERENCES icps(id),
+            FOREIGN KEY (offer_id) REFERENCES offers(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ideas_icp ON ideas(icp_id);
+        CREATE INDEX IF NOT EXISTS idx_ideas_offer ON ideas(offer_id);
         CREATE INDEX IF NOT EXISTS idx_offers_icp ON offers(icp_id);
 
         CREATE INDEX IF NOT EXISTS idx_posts_engagement ON instagram_posts(engagement DESC);

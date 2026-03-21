@@ -66,6 +66,9 @@ if generate_btn:
         try:
             ideas = generate_ideas(icp, patterns=patterns, count=count, offer=active_offer)
             st.session_state["generated_ideas"] = ideas
+            # Persistir no banco
+            offer_id = active_offer.id if active_offer else None
+            repo.save_ideas(conn, icp.id, ideas, offer_id)
         except Exception as e:
             st.error(f"Erro ao gerar ideias: {e}")
             st.info("Verifique sua API key na página Settings.")
