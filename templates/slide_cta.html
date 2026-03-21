@@ -1,13 +1,15 @@
 <div class="slide slide-cta">
   <div class="slide-number">{{ slide_number }}/{{ total_slides }}</div>
-  <div class="accent-bar"></div>
-  <h2 class="headline cta-headline">{{ headline }}</h2>
-  {% if body %}
-  <p class="body-text cta-body">{{ body }}</p>
-  {% endif %}
-  <div class="cta-buttons">
-    <div class="cta-btn">💾 SALVE</div>
-    <div class="cta-btn">📤 COMPARTILHE</div>
-    <div class="cta-btn">💬 COMENTE</div>
+  <div class="{{ text_box_class }}">
+    <div class="accent-bar"></div>
+    <h2 class="headline cta-headline">{{ headline }}</h2>
+    {% if body %}
+    <p class="body-text cta-body">{{ body }}</p>
+    {% endif %}
+    <div class="cta-buttons">
+      <div class="cta-btn">&#128190; SALVE</div>
+      <div class="cta-btn">&#128228; COMPARTILHE</div>
+      <div class="cta-btn">&#128172; COMENTE</div>
+    </div>
   </div>
 </div>

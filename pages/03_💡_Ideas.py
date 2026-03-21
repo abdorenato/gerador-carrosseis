@@ -44,6 +44,10 @@ patterns = st.session_state.get("analytics_patterns")
 if patterns:
     st.info("Padrões de analytics detectados — serão usados na geração de ideias.")
 
+active_offer = st.session_state.get("active_offer")
+if active_offer:
+    st.info(f"Oferta ativa: **{active_offer.name}** — será usada na geração de ideias.")
+
 # ── Geração ──────────────────────────────────────────────────────────────
 
 st.markdown("---")
@@ -60,7 +64,7 @@ with col_btn:
 if generate_btn:
     with st.spinner("Gerando ideias com IA..."):
         try:
-            ideas = generate_ideas(icp, patterns=patterns, count=count)
+            ideas = generate_ideas(icp, patterns=patterns, count=count, offer=active_offer)
             st.session_state["generated_ideas"] = ideas
         except Exception as e:
             st.error(f"Erro ao gerar ideias: {e}")

@@ -85,6 +85,27 @@ def init_db() -> None:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE IF NOT EXISTS offers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            icp_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            dream TEXT NOT NULL,
+            success_proofs TEXT NOT NULL,
+            time_to_result TEXT NOT NULL,
+            effort_level TEXT NOT NULL,
+            core_promise TEXT DEFAULT '',
+            bonuses TEXT DEFAULT '[]',
+            scarcity TEXT DEFAULT '',
+            guarantee TEXT DEFAULT '',
+            method_name TEXT DEFAULT '',
+            summary TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (icp_id) REFERENCES icps(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_offers_icp ON offers(icp_id);
+
         CREATE INDEX IF NOT EXISTS idx_posts_engagement ON instagram_posts(engagement DESC);
         CREATE INDEX IF NOT EXISTS idx_posts_reach ON instagram_posts(reach DESC);
         CREATE INDEX IF NOT EXISTS idx_posts_timestamp ON instagram_posts(timestamp DESC);

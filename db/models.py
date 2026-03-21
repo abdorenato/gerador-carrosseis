@@ -19,6 +19,27 @@ class ICP:
 
 
 @dataclass
+class Offer:
+    icp_id: int
+    name: str
+    # Equação de valor
+    dream: str
+    success_proofs: list[str]
+    time_to_result: str
+    effort_level: str
+    # Componentes da oferta
+    core_promise: str = ""
+    bonuses: list[str] = field(default_factory=list)
+    scarcity: str = ""
+    guarantee: str = ""
+    method_name: str = ""
+    summary: str = ""
+    id: int | None = None
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
 class InstagramPost:
     ig_media_id: str
     media_type: str  # IMAGE, VIDEO, CAROUSEL_ALBUM

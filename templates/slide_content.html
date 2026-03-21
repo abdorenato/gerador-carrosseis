@@ -1,9 +1,11 @@
 <div class="slide slide-content">
   <div class="slide-number">{{ slide_number }}/{{ total_slides }}</div>
-  <div class="accent-bar"></div>
-  <h2 class="headline content-headline">{{ headline }}</h2>
-  {% if body %}
-  <p class="body-text content-body">{{ body }}</p>
-  {% endif %}
-  <div class="swipe-hint">DESLIZE →</div>
+  <div class="{{ text_box_class }}">
+    <div class="accent-bar"></div>
+    <h2 class="headline content-headline">{{ headline }}</h2>
+    {% if body %}
+    <p class="body-text content-body">{{ body }}</p>
+    {% endif %}
+  </div>
+  <div class="swipe-hint">DESLIZE &rarr;</div>
 </div>

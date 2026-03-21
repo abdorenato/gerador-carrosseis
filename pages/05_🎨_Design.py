@@ -8,7 +8,7 @@ import streamlit as st
 from db.database import init_db, get_connection
 from db import repositories as repo
 from db.models import SlideContent
-from services.renderer import render_carousel, get_available_styles, get_slide_html_preview
+from services.renderer import render_carousel, get_available_styles
 
 st.set_page_config(page_title="Design", page_icon="🎨", layout="wide")
 st.title("Design do Carrossel")
@@ -60,28 +60,59 @@ with col_style:
 with col_size:
     dimensions = st.selectbox(
         "Dimensões",
-        options=["1080x1080 (Quadrado)", "1080x1350 (Retrato 4:5)"],
+        options=["1080x1350 (Retrato 4:5)", "1080x1080 (Quadrado)"],
         index=0,
     )
 
 width = 1080
-height = 1080 if "1080x1080" in dimensions else 1350
+height = 1350 if "1350" in dimensions else 1080
 
-# ── Preview HTML ─────────────────────────────────────────────────────────
+# ── Imagem de fundo ──────────────────────────────────────────────────────
 
-st.subheader("Preview dos Slides")
+st.markdown("---")
+st.subheader("Imagem de fundo (opcional)")
 
-preview_tabs = st.tabs([f"Slide {s.index + 1}" for s in project.slides])
-for tab, slide in zip(preview_tabs, project.slides):
-    with tab:
-        html = get_slide_html_preview(slide, selected_style, len(project.slides))
-        st.components.v1.html(html, height=500, scrolling=False)
-        st.caption(f"**{slide.slide_type.upper()}** — {slide.headline}")
+col_upload, col_textbox = st.columns(2)
+
+with col_upload:
+    uploaded_bg = st.file_uploader(
+        "Upload de imagem de fundo",
+        type=["jpg", "jpeg", "png", "webp"],
+        help="A mesma imagem será usada em todos os slides. Use imagens de alta qualidade (1080px+).",
+    )
+
+bg_image_path = None
+if uploaded_bg:
+    bg_dir = Path(__file__).parent.parent / "data" / "backgrounds"
+    bg_dir.mkdir(parents=True, exist_ok=True)
+    bg_image_path = str(bg_dir / uploaded_bg.name)
+    with open(bg_image_path, "wb") as f:
+        f.write(uploaded_bg.getbuffer())
+    st.success(f"Imagem carregada: {uploaded_bg.name}")
+
+with col_textbox:
+    text_box_style = None
+    if uploaded_bg:
+        text_box_option = st.selectbox(
+            "Estilo das caixas de texto",
+            options=["Texto branco, caixa escura", "Texto preto, caixa clara"],
+            index=0,
+        )
+        text_box_style = "dark" if "escura" in text_box_option else "light"
+    else:
+        st.info("Faça upload de uma imagem para ativar as caixas de texto.")
+
+# ── Resumo dos slides ────────────────────────────────────────────────────
+
+st.markdown("---")
+st.subheader("Slides do Projeto")
+
+for slide in project.slides:
+    st.markdown(f"**Slide {slide.index + 1}** ({slide.slide_type.upper()}) — {slide.headline}")
 
 # ── Renderizar PNGs ──────────────────────────────────────────────────────
 
 st.markdown("---")
-st.subheader("Renderizar Imagens")
 
 if st.button("Renderizar todos os slides como PNG", type="primary", use_container_width=True):
     with st.spinner("Renderizando slides com Playwright..."):
@@ -95,6 +126,8 @@ if st.button("Renderizar todos os slides como PNG", type="primary", use_containe
                 width=width,
                 height=height,
                 output_dir=output_dir,
+                bg_image=bg_image_path,
+                text_box_style=text_box_style,
             )
 
             # Atualizar image_path nos slides

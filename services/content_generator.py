@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import anthropic
 
 import config
-from db.models import ICP, SlideContent
+from db.models import ICP, SlideContent, Offer
 
 
 @dataclass
@@ -164,20 +164,135 @@ def _parse_json(text: str) -> dict:
     return json.loads(text)
 
 
+def _format_offer_context(offer: Offer) -> str:
+    return (
+        "OFERTA ATIVA:\n"
+        f"Nome: {offer.name}\n"
+        f"Sonho do cliente: {offer.dream}\n"
+        f"Provas de sucesso: {', '.join(offer.success_proofs)}\n"
+        f"Tempo para resultado: {offer.time_to_result}\n"
+        f"Esforço necessário: {offer.effort_level}\n"
+    )
+
+
+def generate_full_offer(
+    icp: ICP,
+    product: str,
+    differentiator: str,
+    price_range: str,
+) -> dict:
+    """Gera uma oferta completa baseada no ICP e inputs do usuário."""
+    system = (
+        "Você é um estrategista de marketing especialista em construção de ofertas irresistíveis.\n\n"
+        "Use a equação de valor: Valor = (Sonho × Probabilidade de Sucesso) ÷ (Tempo × Esforço)\n\n"
+        f"PERFIL DO PÚBLICO (ICP):\n{_format_icp_context(icp)}\n\n"
+        f"PRODUTO/SERVIÇO: {product}\n"
+        f"DIFERENCIAL: {differentiator}\n"
+        f"FAIXA DE PREÇO: {price_range}\n\n"
+        "Com base no perfil do público e no produto, gere uma oferta irresistível completa.\n"
+        "Pense nas dores, desejos e objeções do ICP para construir cada componente.\n\n"
+        "Responda EXCLUSIVAMENTE com JSON no formato:\n"
+        "{\n"
+        '  "name": "Nome da oferta (curto e impactante)",\n'
+        '  "dream": "O resultado que o cliente deseja alcançar",\n'
+        '  "success_proofs": ["prova 1", "prova 2", "prova 3"],\n'
+        '  "time_to_result": "Em quanto tempo o cliente vê resultado",\n'
+        '  "effort_level": "O que o cliente NÃO precisa fazer (minimizar sacrifício)",\n'
+        '  "core_promise": "Promessa principal da oferta em uma frase",\n'
+        '  "bonuses": ["bônus 1 que ataca objeção X", "bônus 2 que ataca objeção Y"],\n'
+        '  "scarcity": "Elemento de escassez ou urgência",\n'
+        '  "guarantee": "Garantia que reverte o risco do cliente",\n'
+        '  "method_name": "Nome exclusivo do método/sistema"\n'
+        "}"
+    )
+
+    result = _call_claude(
+        system,
+        f"Crie uma oferta irresistível para: {product}. Diferencial: {differentiator}. Preço: {price_range}.",
+    )
+    return _parse_json(result)
+
+
+def suggest_offer_component(
+    icp: ICP,
+    component: str,
+    current_value: str = "",
+) -> list[str]:
+    """Sugere preenchimento para um componente da oferta baseado no ICP."""
+    component_labels = {
+        "dream": "Sonho / Resultado desejado do cliente",
+        "success_proofs": "Provas de sucesso, garantias e autoridade",
+        "time_to_result": "Tempo para o cliente perceber resultado",
+        "effort_level": "Esforço e sacrifício necessários (quanto MENOS melhor)",
+        "core_promise": "Core Promise / Promessa principal da oferta",
+        "bonuses": "Bônus que atacam objeções e medos do cliente",
+        "scarcity": "Escassez e urgência para acelerar a decisão",
+        "guarantee": "Garantia que reverte o risco do cliente",
+        "method_name": "Nome exclusivo e memorável para o método/sistema",
+    }
+
+    label = component_labels.get(component, component)
+
+    system = (
+        "Você é um estrategista de marketing especialista em construção de ofertas irresistíveis.\n\n"
+        "Use a equação de valor: Valor = (Sonho × Probabilidade de Sucesso) ÷ (Tempo × Esforço)\n\n"
+        f"PERFIL DO PÚBLICO (ICP):\n{_format_icp_context(icp)}\n\n"
+        f"O usuário precisa de sugestões para o componente: {label}\n"
+        f"{'Valor atual: ' + current_value if current_value else ''}\n\n"
+        "Gere 3 sugestões práticas e específicas para este componente.\n"
+        "Responda EXCLUSIVAMENTE com JSON no formato:\n"
+        '{"suggestions": ["sugestão 1", "sugestão 2", "sugestão 3"]}'
+    )
+
+    result = _call_claude(system, f"Sugira 3 opções para: {label}")
+    data = _parse_json(result)
+    return data.get("suggestions", [])
+
+
+def generate_offer_summary(icp: ICP, offer: Offer) -> str:
+    """Gera um resumo estruturado da oferta irresistível."""
+    system = (
+        "Você é um especialista em construção de ofertas irresistíveis.\n\n"
+        "Baseado na equação de valor:\n"
+        "Valor = (Sonho × Probabilidade de Sucesso) ÷ (Tempo × Esforço & Sacrifício)\n\n"
+        f"PERFIL DO PÚBLICO (ICP):\n{_format_icp_context(icp)}\n\n"
+        f"OFERTA:\n"
+        f"Nome: {offer.name}\n"
+        f"Sonho: {offer.dream}\n"
+        f"Provas de sucesso: {', '.join(offer.success_proofs)}\n"
+        f"Tempo para resultado: {offer.time_to_result}\n"
+        f"Esforço necessário: {offer.effort_level}\n\n"
+        "Gere um resumo estruturado da oferta com:\n"
+        "1. Posicionamento da oferta (1 frase poderosa)\n"
+        "2. Promessa principal\n"
+        "3. Pontos de prova (bullets)\n"
+        "4. Redutores de risco (o que facilita para o cliente)\n"
+        "5. Sugestão de headline para usar em conteúdo\n\n"
+        "Responda em markdown formatado, SEM JSON."
+    )
+
+    return _call_claude(system, "Gere o resumo estruturado desta oferta.")
+
+
 def generate_ideas(
     icp: ICP,
     patterns: dict | None = None,
     count: int = 5,
+    offer: Offer | None = None,
 ) -> list[dict]:
     """Gera ideias de carrosséis baseadas no ICP e padrões de analytics."""
     icp_context = _format_icp_context(icp)
     analytics_context = _format_analytics_context(patterns)
+    offer_context = _format_offer_context(offer) if offer else ""
 
     system = SYSTEM_PROMPT_IDEAS.format(
         icp_context=icp_context,
         analytics_context=analytics_context,
         count=count,
     )
+
+    if offer_context:
+        system += f"\n\n{offer_context}\nUse a oferta ativa como base para gerar ideias de carrosséis que promovam esta oferta."
 
     result = _call_claude(system, f"Gere {count} ideias de carrosséis para o nicho: {icp.niche}")
     data = _parse_json(result)

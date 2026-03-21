@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from sqlite3 import Connection
 
-from db.models import ICP, InstagramPost, CarouselProject, SlideContent
+from db.models import ICP, InstagramPost, CarouselProject, SlideContent, Offer
 
 
 # ── ICP ──────────────────────────────────────────────────────────────────
@@ -77,6 +77,98 @@ def _row_to_icp(row) -> ICP:
         objections=json.loads(row["objections"]),
         language_style=row["language_style"],
         tone_keywords=json.loads(row["tone_keywords"]),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+# ── Offers ───────────────────────────────────────────────────────────────
+
+def create_offer(conn: Connection, offer: Offer) -> int:
+    cur = conn.execute(
+        """INSERT INTO offers (icp_id, name, dream, success_proofs,
+           time_to_result, effort_level, core_promise, bonuses,
+           scarcity, guarantee, method_name, summary)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            offer.icp_id,
+            offer.name,
+            offer.dream,
+            json.dumps(offer.success_proofs, ensure_ascii=False),
+            offer.time_to_result,
+            offer.effort_level,
+            offer.core_promise,
+            json.dumps(offer.bonuses, ensure_ascii=False),
+            offer.scarcity,
+            offer.guarantee,
+            offer.method_name,
+            offer.summary,
+        ),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def get_offer(conn: Connection, offer_id: int) -> Offer | None:
+    row = conn.execute("SELECT * FROM offers WHERE id = ?", (offer_id,)).fetchone()
+    if row is None:
+        return None
+    return _row_to_offer(row)
+
+
+def list_offers_by_icp(conn: Connection, icp_id: int) -> list[Offer]:
+    rows = conn.execute(
+        "SELECT * FROM offers WHERE icp_id = ? ORDER BY updated_at DESC",
+        (icp_id,),
+    ).fetchall()
+    return [_row_to_offer(r) for r in rows]
+
+
+def update_offer(conn: Connection, offer: Offer) -> None:
+    conn.execute(
+        """UPDATE offers SET name=?, dream=?, success_proofs=?,
+           time_to_result=?, effort_level=?, core_promise=?,
+           bonuses=?, scarcity=?, guarantee=?, method_name=?,
+           summary=?, updated_at=CURRENT_TIMESTAMP
+           WHERE id=?""",
+        (
+            offer.name,
+            offer.dream,
+            json.dumps(offer.success_proofs, ensure_ascii=False),
+            offer.time_to_result,
+            offer.effort_level,
+            offer.core_promise,
+            json.dumps(offer.bonuses, ensure_ascii=False),
+            offer.scarcity,
+            offer.guarantee,
+            offer.method_name,
+            offer.summary,
+            offer.id,
+        ),
+    )
+    conn.commit()
+
+
+def delete_offer(conn: Connection, offer_id: int) -> None:
+    conn.execute("DELETE FROM offers WHERE id = ?", (offer_id,))
+    conn.commit()
+
+
+def _row_to_offer(row) -> Offer:
+    return Offer(
+        id=row["id"],
+        icp_id=row["icp_id"],
+        name=row["name"],
+        dream=row["dream"],
+        success_proofs=json.loads(row["success_proofs"]),
+        time_to_result=row["time_to_result"],
+        effort_level=row["effort_level"],
+        core_promise=row["core_promise"] or "",
+        bonuses=json.loads(row["bonuses"] or "[]"),
+        scarcity=row["scarcity"] or "",
+        guarantee=row["guarantee"] or "",
+        method_name=row["method_name"] or "",
+        summary=row["summary"] or "",
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )

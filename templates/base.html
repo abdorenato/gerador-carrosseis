@@ -2,19 +2,19 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1080, height=1080">
+<meta name="viewport" content="width=1080, height={{ height|default(1350) }}">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
     width: 1080px;
-    height: 1080px;
+    height: {{ height|default(1350) }}px;
     overflow: hidden;
     font-family: 'Inter', sans-serif;
   }
   .slide {
     width: 1080px;
-    height: 1080px;
+    height: {{ height|default(1350) }}px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -22,7 +22,26 @@
     padding: 80px;
     text-align: center;
     position: relative;
+    {% if bg_image %}
+    background-image: url('{{ bg_image }}');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    {% endif %}
   }
+  {% if bg_image %}
+  .slide::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 0;
+  }
+  .slide > * {
+    position: relative;
+    z-index: 1;
+  }
+  {% endif %}
   .slide-number {
     position: absolute;
     top: 40px;
@@ -30,6 +49,7 @@
     font-size: 18px;
     font-weight: 600;
     opacity: 0.5;
+    z-index: 1;
   }
   .headline {
     font-weight: 800;
@@ -47,12 +67,36 @@
     font-weight: 600;
     opacity: 0.6;
     letter-spacing: 1px;
+    z-index: 1;
   }
   .accent-bar {
     width: 60px;
     height: 5px;
     border-radius: 3px;
     margin-bottom: 30px;
+  }
+  /* Text boxes for image backgrounds */
+  .text-box {
+    padding: 24px 36px;
+    border-radius: 12px;
+    display: inline-block;
+    max-width: 90%;
+  }
+  .text-box-dark {
+    background: rgba(0, 0, 0, 0.85);
+    color: #ffffff;
+  }
+  .text-box-dark .headline,
+  .text-box-dark .body-text {
+    color: #ffffff;
+  }
+  .text-box-light {
+    background: rgba(255, 255, 255, 0.92);
+    color: #1a1a1a;
+  }
+  .text-box-light .headline,
+  .text-box-light .body-text {
+    color: #1a1a1a;
   }
   {{ custom_css }}
 </style>

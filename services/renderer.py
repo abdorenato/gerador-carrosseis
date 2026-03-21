@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -28,8 +29,36 @@ def _load_style_css(style_name: str) -> str:
     return css_path.read_text(encoding="utf-8")
 
 
-def _build_html(slide: SlideContent, style: str, total_slides: int) -> str:
+def _image_to_data_uri(image_path: str) -> str:
+    """Converte imagem em data URI base64 para embutir no HTML."""
+    p = Path(image_path)
+    if not p.exists():
+        return ""
+    suffix = p.suffix.lower()
+    mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+    mime = mime_map.get(suffix, "image/jpeg")
+    data = p.read_bytes()
+    b64 = base64.b64encode(data).decode("utf-8")
+    return f"data:{mime};base64,{b64}"
+
+
+def _build_html(
+    slide: SlideContent,
+    style: str,
+    total_slides: int,
+    height: int = 1350,
+    bg_image: str | None = None,
+    text_box_style: str | None = None,
+) -> str:
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+
+    # Determinar classe da text-box
+    text_box_class = ""
+    if bg_image or text_box_style:
+        if text_box_style == "light":
+            text_box_class = "text-box text-box-light"
+        elif text_box_style == "dark":
+            text_box_class = "text-box text-box-dark"
 
     # Carrega template do slide
     template_file = TEMPLATE_MAP.get(slide.slide_type, "slide_content.html")
@@ -39,7 +68,13 @@ def _build_html(slide: SlideContent, style: str, total_slides: int) -> str:
         body=slide.body,
         slide_number=slide.index + 1,
         total_slides=total_slides,
+        text_box_class=text_box_class,
     )
+
+    # Resolver imagem de fundo
+    bg_data_uri = ""
+    if bg_image:
+        bg_data_uri = _image_to_data_uri(bg_image)
 
     # Carrega template base com CSS
     base_template = env.get_template("base.html")
@@ -47,6 +82,8 @@ def _build_html(slide: SlideContent, style: str, total_slides: int) -> str:
     full_html = base_template.render(
         custom_css=custom_css,
         slide_content=slide_html,
+        height=height,
+        bg_image=bg_data_uri if bg_data_uri else "",
     )
     return full_html
 
@@ -55,8 +92,10 @@ async def _render_slides_async(
     slides: list[SlideContent],
     style: str = "dark_bold",
     width: int = 1080,
-    height: int = 1080,
+    height: int = 1350,
     output_dir: str | None = None,
+    bg_image: str | None = None,
+    text_box_style: str | None = None,
 ) -> list[str]:
     if output_dir is None:
         output_dir = config.SLIDES_OUTPUT_DIR
@@ -72,7 +111,7 @@ async def _render_slides_async(
         page = await browser.new_page(viewport={"width": width, "height": height})
 
         for slide in slides:
-            html = _build_html(slide, style, total)
+            html = _build_html(slide, style, total, height, bg_image, text_box_style)
             await page.set_content(html, wait_until="networkidle")
             file_name = f"slide_{slide.index + 1:02d}.png"
             file_path = out_path / file_name
@@ -88,12 +127,14 @@ def render_carousel(
     slides: list[SlideContent],
     style: str = "dark_bold",
     width: int = 1080,
-    height: int = 1080,
+    height: int = 1350,
     output_dir: str | None = None,
+    bg_image: str | None = None,
+    text_box_style: str | None = None,
 ) -> list[str]:
     """Renderiza todos os slides como PNGs. Retorna lista de caminhos."""
     return asyncio.run(
-        _render_slides_async(slides, style, width, height, output_dir)
+        _render_slides_async(slides, style, width, height, output_dir, bg_image, text_box_style)
     )
 
 
@@ -102,8 +143,10 @@ def render_single_slide(
     style: str = "dark_bold",
     total_slides: int = 1,
     width: int = 1080,
-    height: int = 1080,
+    height: int = 1350,
     output_dir: str | None = None,
+    bg_image: str | None = None,
+    text_box_style: str | None = None,
 ) -> str:
     """Renderiza um único slide. Retorna caminho do PNG."""
     if output_dir is None:
@@ -115,7 +158,7 @@ def render_single_slide(
         async with async_playwright() as p:
             browser = await p.chromium.launch()
             page = await browser.new_page(viewport={"width": width, "height": height})
-            html = _build_html(slide, style, total_slides)
+            html = _build_html(slide, style, total_slides, height, bg_image, text_box_style)
             await page.set_content(html, wait_until="networkidle")
             file_name = f"slide_{slide.index + 1:02d}.png"
             file_path = out_path / file_name
@@ -133,7 +176,12 @@ def get_available_styles() -> list[str]:
 
 
 def get_slide_html_preview(
-    slide: SlideContent, style: str = "dark_bold", total_slides: int = 1
+    slide: SlideContent,
+    style: str = "dark_bold",
+    total_slides: int = 1,
+    height: int = 1350,
+    bg_image: str | None = None,
+    text_box_style: str | None = None,
 ) -> str:
     """Retorna o HTML completo do slide para preview no browser."""
-    return _build_html(slide, style, total_slides)
+    return _build_html(slide, style, total_slides, height, bg_image, text_box_style)

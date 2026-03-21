@@ -45,12 +45,11 @@ st.markdown(
     Bem-vindo! Use o menu lateral para navegar entre as etapas:
 
     1. **ICP** — Cadastre seu cliente ideal
-    2. **Analytics** — Analise o que funciona no seu perfil
+    2. **Oferta** — Construa sua oferta irresistível
     3. **Ideas** — Gere ideias de carrosséis
     4. **Copywriter** — Escreva o copy de cada slide
     5. **Design** — Crie o visual dos slides
-    6. **Publish** — Publique no Instagram
-    7. **Settings** — Configure APIs e conexões
+    6. **Settings** — Configure APIs e conexões
     """
 )
 
