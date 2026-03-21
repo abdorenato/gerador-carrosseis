@@ -6,8 +6,18 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).parent
 
+
+def _get_secret(key: str, default: str = "") -> str:
+    """Read from st.secrets (Streamlit Cloud) or env vars (local)."""
+    try:
+        import streamlit as st
+        return st.secrets.get(key, os.getenv(key, default))
+    except Exception:
+        return os.getenv(key, default)
+
+
 # Claude API
-CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "")
+CLAUDE_API_KEY = _get_secret("CLAUDE_API_KEY")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 # Meta / Instagram
