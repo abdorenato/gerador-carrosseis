@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import io
 import json
+import zipfile
+from pathlib import Path
+
 import streamlit as st
 from db.database import init_db, get_connection
 from db import repositories as repo
+from db.models import SlideContent
 from services.monoflow_generator import (
     generate_mother_text,
     generate_instagram_reels,
@@ -14,6 +19,8 @@ from services.monoflow_generator import (
     generate_tiktok_video,
     refine_content,
 )
+from services.image_service import search_unsplash, download_image
+from services.renderer import render_carousel, get_available_styles
 
 init_db()
 conn = get_connection()
@@ -137,16 +144,82 @@ def _render_post(data: dict):
         st.markdown(f"**#️⃣** {' '.join('#' + h for h in data['hashtags'])}")
     if data.get("best_time"):
         st.markdown(f"**⏰ Melhor horário:** {data['best_time']}")
-    if data.get("image_suggestion"):
+    if data.get("headline_on_image"):
+        st.markdown(f"**📝 Título na imagem:** {data['headline_on_image']}")
+
+    # ── Busca e renderização de imagem ──
+    keywords = data.get("image_keywords", [])
+    if keywords:
+        st.markdown("---")
+        st.markdown("#### 🖼️ Imagem do Post")
+        query = " ".join(keywords[:3])
+
+        if st.button("🔍 Buscar fotos no Unsplash", key="search_post_img"):
+            with st.spinner("Buscando fotos..."):
+                photos = search_unsplash(query, count=6)
+                st.session_state["post_photos"] = photos
+
+        photos = st.session_state.get("post_photos", [])
+        if photos:
+            st.caption(f"Busca: \"{query}\"")
+            cols = st.columns(3)
+            for i, photo in enumerate(photos):
+                with cols[i % 3]:
+                    st.image(photo["thumb"], caption=f"📷 {photo['author']}", use_container_width=True)
+                    if st.button("Usar esta", key=f"use_post_photo_{i}"):
+                        st.session_state["selected_post_photo"] = photo
+                        st.rerun()
+
+            selected = st.session_state.get("selected_post_photo")
+            if selected:
+                st.success(f"Foto selecionada: {selected['author']}")
+
+                text_box_opt = st.selectbox(
+                    "Estilo do texto",
+                    ["Texto branco, caixa escura", "Texto preto, caixa clara"],
+                    key="post_text_style",
+                )
+                text_box_style = "dark" if "escura" in text_box_opt else "light"
+
+                if st.button("🎨 Renderizar Post", key="render_post", type="primary"):
+                    with st.spinner("Renderizando..."):
+                        try:
+                            bg_dir = str(Path(__file__).parent.parent / "data" / "backgrounds")
+                            bg_path = download_image(selected["url"], bg_dir, "post_bg.jpg")
+
+                            headline = data.get("headline_on_image", data.get("caption", "")[:50])
+                            slide = SlideContent(index=0, slide_type="hook", headline=headline, body="")
+                            output_dir = str(Path(__file__).parent.parent / "output" / "monoflow_post")
+                            paths = render_carousel(
+                                [slide], style="dark_bold", width=1080, height=1080,
+                                output_dir=output_dir, bg_image=bg_path, text_box_style=text_box_style,
+                            )
+                            st.session_state["rendered_post"] = paths[0]
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro: {e}")
+
+            rendered = st.session_state.get("rendered_post")
+            if rendered and Path(rendered).exists():
+                st.image(rendered, caption="Post renderizado", use_container_width=True)
+                st.download_button(
+                    "📥 Download Post",
+                    data=Path(rendered).read_bytes(),
+                    file_name="post_instagram.png",
+                    mime="image/png",
+                    key="dl_post",
+                )
+                st.caption(f"📷 Foto: {st.session_state.get('selected_post_photo', {}).get('author', '')} via Unsplash")
+    elif data.get("image_suggestion"):
         st.info(f"🖼️ **Sugestão de imagem:** {data['image_suggestion']}")
 
 
 def _render_carousel(data: dict):
     st.markdown("### 🎠 Carrossel Instagram")
-    slides = data.get("slides", [])
-    if slides:
-        slide_tabs = st.tabs([f"Slide {s.get('index', 0) + 1}" for s in slides])
-        for tab, slide in zip(slide_tabs, slides):
+    slides_data = data.get("slides", [])
+    if slides_data:
+        slide_tabs = st.tabs([f"Slide {s.get('index', 0) + 1}" for s in slides_data])
+        for tab, slide in zip(slide_tabs, slides_data):
             with tab:
                 st.markdown(f"**Tipo:** {slide.get('slide_type', '')}")
                 st.markdown(f"### {slide.get('headline', '')}")
@@ -156,6 +229,139 @@ def _render_carousel(data: dict):
     st.markdown(f"**📝 Legenda:** {data.get('caption', '')}")
     if data.get("hashtags"):
         st.markdown(f"**#️⃣** {' '.join('#' + h for h in data['hashtags'])}")
+
+    # ── Busca de imagem e renderização ──
+    keywords = data.get("image_keywords", [])
+    if slides_data:
+        st.markdown("---")
+        st.markdown("#### 🎨 Renderizar Carrossel")
+
+        col_style, col_textbox = st.columns(2)
+        with col_style:
+            styles = get_available_styles()
+            style_labels = {
+                "dark_bold": "Dark Bold",
+                "light_minimal": "Light Minimal",
+                "gradient_pop": "Gradient Pop",
+            }
+            selected_style = st.selectbox(
+                "Estilo visual",
+                options=styles,
+                format_func=lambda s: style_labels.get(s, s),
+                key="carousel_style",
+            )
+        with col_textbox:
+            use_bg = st.checkbox("Usar foto de fundo", value=bool(keywords), key="carousel_use_bg")
+
+        if use_bg and keywords:
+            query = " ".join(keywords[:3])
+            if st.button("🔍 Buscar fotos no Unsplash", key="search_carousel_img"):
+                with st.spinner("Buscando fotos..."):
+                    photos = search_unsplash(query, count=6)
+                    st.session_state["carousel_photos"] = photos
+
+            photos = st.session_state.get("carousel_photos", [])
+            if photos:
+                st.caption(f"Busca: \"{query}\"")
+                cols = st.columns(3)
+                for i, photo in enumerate(photos):
+                    with cols[i % 3]:
+                        st.image(photo["thumb"], caption=f"📷 {photo['author']}", use_container_width=True)
+                        if st.button("Usar", key=f"use_carousel_photo_{i}"):
+                            st.session_state["selected_carousel_photo"] = photo
+                            st.rerun()
+
+        # Botão de renderizar
+        selected_photo = st.session_state.get("selected_carousel_photo") if use_bg else None
+        if selected_photo:
+            st.success(f"Foto selecionada: {selected_photo['author']}")
+            text_box_opt = st.selectbox(
+                "Estilo do texto sobre imagem",
+                ["Texto branco, caixa escura", "Texto preto, caixa clara"],
+                key="carousel_text_style",
+            )
+            text_box_style = "dark" if "escura" in text_box_opt else "light"
+        else:
+            text_box_style = None
+
+        if st.button("🚀 Renderizar slides", key="render_carousel", type="primary", use_container_width=True):
+            with st.spinner("Renderizando slides..."):
+                try:
+                    # Converter dicts em SlideContent
+                    slide_objects = [
+                        SlideContent(
+                            index=s.get("index", i),
+                            slide_type=s.get("slide_type", "content"),
+                            headline=s.get("headline", ""),
+                            body=s.get("body", ""),
+                        )
+                        for i, s in enumerate(slides_data)
+                    ]
+
+                    # Download foto se selecionada
+                    bg_path = None
+                    if selected_photo:
+                        bg_dir = str(Path(__file__).parent.parent / "data" / "backgrounds")
+                        bg_path = download_image(selected_photo["url"], bg_dir, "carousel_bg.jpg")
+
+                    output_dir = str(Path(__file__).parent.parent / "output" / "monoflow_carousel")
+                    paths = render_carousel(
+                        slide_objects,
+                        style=selected_style,
+                        width=1080,
+                        height=1350,
+                        output_dir=output_dir,
+                        bg_image=bg_path,
+                        text_box_style=text_box_style,
+                    )
+                    st.session_state["rendered_carousel_paths"] = paths
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro na renderização: {e}")
+
+        # Mostrar slides renderizados
+        rendered = st.session_state.get("rendered_carousel_paths", [])
+        if rendered:
+            st.markdown("---")
+            st.markdown("#### Slides Renderizados")
+            img_cols = st.columns(min(len(rendered), 4))
+            for i, path in enumerate(rendered):
+                p = Path(path)
+                if p.exists():
+                    with img_cols[i % len(img_cols)]:
+                        st.image(str(p), caption=f"Slide {i + 1}", use_container_width=True)
+
+            # Downloads
+            dl_col1, dl_col2 = st.columns(2)
+            with dl_col1:
+                for i, path in enumerate(rendered):
+                    p = Path(path)
+                    if p.exists():
+                        st.download_button(
+                            f"📥 Slide {i + 1}",
+                            data=p.read_bytes(),
+                            file_name=f"slide_{i + 1}.png",
+                            mime="image/png",
+                            key=f"dl_carousel_slide_{i}",
+                        )
+            with dl_col2:
+                zip_buf = io.BytesIO()
+                with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+                    for i, path in enumerate(rendered):
+                        p = Path(path)
+                        if p.exists():
+                            zf.write(p, f"slide_{i + 1}.png")
+                zip_buf.seek(0)
+                st.download_button(
+                    "📥 Download todos (ZIP)",
+                    data=zip_buf,
+                    file_name="carrossel_monoflow.zip",
+                    mime="application/zip",
+                    type="primary",
+                    key="dl_carousel_zip",
+                )
+            if selected_photo:
+                st.caption(f"📷 Foto: {selected_photo.get('author', '')} via Unsplash")
 
 
 def _render_stories(data: dict):

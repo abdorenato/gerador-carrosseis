@@ -165,7 +165,9 @@ def generate_instagram_post(icp: ICP, mother_text: str) -> dict:
         '  "caption": "Legenda completa do post",\n'
         '  "hashtags": ["hashtag1", "hashtag2"],\n'
         '  "best_time": "Melhor horário sugerido para postar",\n'
-        '  "image_suggestion": "Descrição da imagem ideal para acompanhar"\n'
+        '  "image_suggestion": "Descrição da imagem ideal para acompanhar",\n'
+        '  "image_keywords": ["keyword1 em inglês", "keyword2 em inglês"],\n'
+        '  "headline_on_image": "Frase curta e impactante para sobrepor na imagem (máx 8 palavras)"\n'
         "}"
     )
 
@@ -199,7 +201,8 @@ def generate_instagram_carousel(
         '    {"index": 0, "slide_type": "hook|content|listicle|quote|cta", "headline": "...", "body": "..."}\n'
         "  ],\n"
         '  "caption": "Legenda do carrossel",\n'
-        '  "hashtags": ["hashtag1", "hashtag2"]\n'
+        '  "hashtags": ["hashtag1", "hashtag2"],\n'
+        '  "image_keywords": ["keyword1 em inglês para buscar foto de fundo", "keyword2"]\n'
         "}"
     )
 
