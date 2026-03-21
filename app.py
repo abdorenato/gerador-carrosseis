@@ -3,8 +3,8 @@ from db.database import init_db, get_connection
 from db import repositories as repo
 
 st.set_page_config(
-    page_title="Gerador de Carrosséis",
-    page_icon="🎠",
+    page_title="Growth Studio",
+    page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -14,7 +14,7 @@ init_db()
 
 # ── Sidebar ──────────────────────────────────────────────────────────────
 
-st.sidebar.title("Gerador de Carrosséis")
+st.sidebar.title("Growth Studio")
 st.sidebar.markdown("---")
 
 # Seletor de ICP ativo
@@ -39,7 +39,7 @@ st.sidebar.caption("Navegue pelas páginas no menu acima.")
 
 # ── Página principal ─────────────────────────────────────────────────────
 
-st.title("Gerador de Carrosséis para Instagram")
+st.title("Growth Studio")
 st.markdown(
     """
     Bem-vindo! Use o menu lateral para navegar entre as etapas:
