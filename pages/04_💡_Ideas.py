@@ -101,11 +101,16 @@ if ideas:
                 f"Estilo: {style_label.get(idea.get('carousel_style', ''), idea.get('carousel_style', '-'))}"
             )
 
-            if st.button("Usar esta ideia →", key=f"use_idea_{i}", type="primary"):
-                st.session_state["selected_idea"] = idea
-                st.session_state["selected_icp_id"] = icp.id
-                st.success(
-                    f"Ideia selecionada! Vá para a página **Copywriter** para escrever o copy."
-                )
+            btn_col1, btn_col2 = st.columns(2)
+            with btn_col1:
+                if st.button("🔄 Usar no Monoflow", key=f"monoflow_idea_{i}", type="primary", use_container_width=True):
+                    st.session_state["monoflow_idea"] = idea
+                    st.session_state["selected_icp_id"] = icp.id
+                    st.success("Ideia selecionada! Vá para a página **Monoflow**.")
+            with btn_col2:
+                if st.button("✍️ Usar no Copywriter", key=f"use_idea_{i}", use_container_width=True):
+                    st.session_state["selected_idea"] = idea
+                    st.session_state["selected_icp_id"] = icp.id
+                    st.success("Ideia selecionada! Vá para a página **Copywriter**.")
 
             st.markdown("---")

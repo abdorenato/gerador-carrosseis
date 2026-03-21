@@ -44,13 +44,14 @@ st.markdown(
     """
     Bem-vindo! Use o menu lateral para navegar entre as etapas:
 
-    1. **ICP** — Cadastre seu cliente ideal
-    2. **Oferta** — Construa sua oferta irresistível
-    3. **Pitch** — Gere seu pitch de vendas
-    4. **Ideas** — Gere ideias de carrosséis
-    5. **Copywriter** — Escreva o copy de cada slide
-    6. **Design** — Crie o visual dos slides
-    7. **Settings** — Configure APIs e conexões
+    1. **🎯 ICP** — Cadastre seu cliente ideal
+    2. **💰 Oferta** — Construa sua oferta irresistível
+    3. **🎤 Pitch** — Gere seu pitch de vendas
+    4. **💡 Ideas** — Gere ideias de conteúdo
+    5. **🔄 Monoflow** — Um tema → conteúdos para todas as plataformas
+    6. **✍️ Copywriter** — Escreva o copy de carrosséis (legacy)
+    7. **🎨 Design** — Crie o visual dos slides (legacy)
+    8. **⚙️ Settings** — Configure APIs e conexões
     """
 )
 
