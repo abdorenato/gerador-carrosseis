@@ -87,13 +87,23 @@ def _build_html(
     return full_html
 
 
-def _has_playwright() -> bool:
-    """Verifica se o Playwright está disponível e com browsers instalados."""
+def _ensure_playwright_browsers():
+    """Instala browsers do Playwright se necessário."""
+    import subprocess
+    import shutil
+    # Verifica se chromium já está instalado
     try:
-        from playwright.async_api import async_playwright
-        return True
-    except ImportError:
-        return False
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            browser.close()
+    except Exception:
+        # Browsers não instalados, instalar
+        subprocess.run(
+            ["playwright", "install", "chromium"],
+            check=True,
+            capture_output=True,
+        )
 
 
 async def _render_slides_async(
@@ -143,6 +153,7 @@ def render_carousel(
     text_box_style: str | None = None,
 ) -> list[str]:
     """Renderiza todos os slides como PNGs. Retorna lista de caminhos."""
+    _ensure_playwright_browsers()
     return asyncio.run(
         _render_slides_async(slides, style, width, height, output_dir, bg_image, text_box_style)
     )
