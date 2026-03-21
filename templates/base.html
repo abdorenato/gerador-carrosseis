@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080, height=1080">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1080px;
+    height: 1080px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+  }
+  .slide {
+    width: 1080px;
+    height: 1080px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 80px;
+    text-align: center;
+    position: relative;
+  }
+  .slide-number {
+    position: absolute;
+    top: 40px;
+    right: 50px;
+    font-size: 18px;
+    font-weight: 600;
+    opacity: 0.5;
+  }
+  .headline {
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 30px;
+  }
+  .body-text {
+    font-weight: 400;
+    line-height: 1.6;
+  }
+  .swipe-hint {
+    position: absolute;
+    bottom: 40px;
+    font-size: 16px;
+    font-weight: 600;
+    opacity: 0.6;
+    letter-spacing: 1px;
+  }
+  .accent-bar {
+    width: 60px;
+    height: 5px;
+    border-radius: 3px;
+    margin-bottom: 30px;
+  }
+  {{ custom_css }}
+</style>
+</head>
+<body>
+  {{ slide_content }}
+</body>
+</html>

@@ -1,0 +1,9 @@
+<div class="slide slide-quote">
+  <div class="slide-number">{{ slide_number }}/{{ total_slides }}</div>
+  <div class="quote-mark">"</div>
+  <h2 class="headline quote-headline">{{ headline }}</h2>
+  {% if body %}
+  <p class="body-text quote-body">— {{ body }}</p>
+  {% endif %}
+  <div class="swipe-hint">DESLIZE →</div>
+</div>

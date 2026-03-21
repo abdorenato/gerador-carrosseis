@@ -1,0 +1,97 @@
+/* Light Minimal — fundo claro, tipografia limpa, elegante */
+
+.slide {
+  background: #FAFAF8;
+  color: #1a1a1a;
+}
+
+.headline {
+  font-size: 60px;
+  color: #1a1a1a;
+  font-family: 'Playfair Display', serif;
+}
+
+.hook-headline {
+  font-size: 68px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.body-text {
+  font-size: 26px;
+  color: #4a4a4a;
+  max-width: 800px;
+  line-height: 1.7;
+}
+
+.accent-bar {
+  background: #1a1a1a;
+}
+
+.slide-number {
+  color: rgba(26, 26, 26, 0.3);
+  font-family: 'Inter', sans-serif;
+}
+
+.swipe-hint {
+  color: rgba(26, 26, 26, 0.3);
+  letter-spacing: 3px;
+}
+
+/* Listicle */
+.list-number {
+  font-size: 130px;
+  font-weight: 900;
+  color: #E8E4DF;
+  line-height: 1;
+  margin-bottom: 10px;
+  font-family: 'Playfair Display', serif;
+}
+
+.listicle-headline {
+  font-size: 52px;
+}
+
+/* Quote */
+.quote-mark {
+  font-size: 160px;
+  font-family: 'Playfair Display', serif;
+  color: #D4CFC9;
+  line-height: 0.6;
+  margin-bottom: 20px;
+}
+
+.quote-headline {
+  font-size: 46px;
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  font-style: italic;
+  color: #2a2a2a;
+}
+
+.quote-body {
+  font-size: 22px;
+  color: #888;
+  margin-top: 20px;
+}
+
+/* CTA */
+.cta-headline {
+  font-size: 52px;
+  margin-bottom: 40px;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.cta-btn {
+  background: #1a1a1a;
+  color: #FAFAF8;
+  padding: 16px 32px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 20px;
+}
