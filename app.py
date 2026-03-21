@@ -46,10 +46,11 @@ st.markdown(
 
     1. **ICP** — Cadastre seu cliente ideal
     2. **Oferta** — Construa sua oferta irresistível
-    3. **Ideas** — Gere ideias de carrosséis
-    4. **Copywriter** — Escreva o copy de cada slide
-    5. **Design** — Crie o visual dos slides
-    6. **Settings** — Configure APIs e conexões
+    3. **Pitch** — Gere seu pitch de vendas
+    4. **Ideas** — Gere ideias de carrosséis
+    5. **Copywriter** — Escreva o copy de cada slide
+    6. **Design** — Crie o visual dos slides
+    7. **Settings** — Configure APIs e conexões
     """
 )
 

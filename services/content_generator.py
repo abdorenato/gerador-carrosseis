@@ -274,6 +274,71 @@ def generate_offer_summary(icp: ICP, offer: Offer) -> str:
     return _call_claude(system, "Gere o resumo estruturado desta oferta.")
 
 
+def generate_pitch(icp: ICP, offer: Offer) -> dict:
+    """Gera um pitch de vendas baseado nas 5 perguntas + pitch final."""
+    offer_context = (
+        f"OFERTA:\n"
+        f"Nome: {offer.name}\n"
+        f"Core Promise: {offer.core_promise}\n"
+        f"Sonho: {offer.dream}\n"
+        f"Provas de sucesso: {', '.join(offer.success_proofs)}\n"
+        f"Tempo para resultado: {offer.time_to_result}\n"
+        f"Esforço necessário: {offer.effort_level}\n"
+        f"Bônus: {', '.join(offer.bonuses)}\n"
+        f"Escassez: {offer.scarcity}\n"
+        f"Garantia: {offer.guarantee}\n"
+        f"Nome do método: {offer.method_name}\n"
+    )
+
+    system = (
+        "Você é um especialista em copywriting e vendas, mestre em construção de pitches de venda persuasivos.\n\n"
+        f"PERFIL DO PÚBLICO (ICP):\n{_format_icp_context(icp)}\n\n"
+        f"{offer_context}\n\n"
+        "Construa um pitch de vendas respondendo estas 5 perguntas fundamentais:\n\n"
+        "1. POR QUE COMPRAR DE VOCÊ? — O que te diferencia dos concorrentes\n"
+        "2. POR QUE COMPRAR AGORA? — Urgência e timing\n"
+        "3. POR QUE VAI SE FERRAR SE NÃO COMPRAR AGORA? — Consequências de não agir\n"
+        "4. POR QUE EU SOU A PESSOA INDICADA PARA VENDER? — Autoridade e credibilidade\n"
+        "5. POR QUE ESTOU ENTREGANDO MAIS COM UM VALOR MENOR? — Justificativa de preço/valor\n\n"
+        "Depois, gere um PITCH FINAL completo e persuasivo que integre todas as respostas em um texto vendedor.\n\n"
+        "Use linguagem do público-alvo, seja direto e emocional.\n\n"
+        "Responda EXCLUSIVAMENTE com JSON no formato:\n"
+        "{\n"
+        '  "answers": [\n'
+        '    {"question": "Por que comprar de você?", "answer": "resposta persuasiva"},\n'
+        '    {"question": "Por que comprar agora?", "answer": "resposta persuasiva"},\n'
+        '    {"question": "Por que vai se ferrar se não comprar agora?", "answer": "resposta persuasiva"},\n'
+        '    {"question": "Por que eu sou a pessoa indicada?", "answer": "resposta persuasiva"},\n'
+        '    {"question": "Por que entrego mais com valor menor?", "answer": "resposta persuasiva"}\n'
+        '  ],\n'
+        '  "pitch": "Texto completo do pitch de vendas, pronto para usar"\n'
+        "}"
+    )
+
+    result = _call_claude(system, "Construa o pitch de vendas para esta oferta.")
+    return _parse_json(result)
+
+
+def generate_pitch_final(icp: ICP, offer: Offer, answers: list[dict]) -> str:
+    """Regenera o pitch final com base nas respostas ajustadas pelo usuário."""
+    answers_text = "\n".join(
+        f"{a['question']}: {a['answer']}" for a in answers
+    )
+
+    system = (
+        "Você é um copywriter especialista em pitches de venda.\n\n"
+        f"PERFIL DO PÚBLICO (ICP):\n{_format_icp_context(icp)}\n\n"
+        f"OFERTA: {offer.name}\n"
+        f"Core Promise: {offer.core_promise}\n\n"
+        f"RESPOSTAS DO PITCH:\n{answers_text}\n\n"
+        "Com base nessas respostas, gere um PITCH DE VENDAS completo, persuasivo e pronto para usar.\n"
+        "Use linguagem do público-alvo, seja direto e emocional.\n"
+        "Responda APENAS com o texto do pitch, SEM JSON."
+    )
+
+    return _call_claude(system, "Gere o pitch de vendas final.")
+
+
 def generate_ideas(
     icp: ICP,
     patterns: dict | None = None,
