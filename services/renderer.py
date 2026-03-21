@@ -138,7 +138,7 @@ def _render_slide_image(
     content_width = width - (margin_x * 2)
 
     # Contador de slides (canto superior direito)
-    counter_font = _get_font(28)
+    counter_font = _get_font(40)
     counter_text = f"{slide.index + 1}/{total_slides}"
     draw.text((width - margin_x - 60, 40), counter_text, font=counter_font, fill=palette["accent"])
 
@@ -150,8 +150,8 @@ def _render_slide_image(
         box_w = width - (box_margin * 2)
 
         # Calcular altura do box baseado no conteúdo
-        headline_font = _get_font(52, bold=True)
-        body_font = _get_font(36)
+        headline_font = _get_font(80, bold=True)
+        body_font = _get_font(52)
 
         # Estimar altura
         headline_lines = len(textwrap.wrap(slide.headline, width=int((box_w - box_padding * 2) / 30))) or 1
@@ -195,8 +195,8 @@ def _render_slide_image(
     else:
         # Renderização padrão (sem imagem de fundo)
         text_color = palette["text"]
-        headline_font = _get_font(80, bold=True)
-        body_font = _get_font(48)
+        headline_font = _get_font(120, bold=True)
+        body_font = _get_font(64)
 
         # Calcular altura total do conteúdo para centralizar verticalmente
         avg_char_w = headline_font.getlength("A")
