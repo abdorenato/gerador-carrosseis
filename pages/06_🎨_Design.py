@@ -115,7 +115,7 @@ for slide in project.slides:
 st.markdown("---")
 
 if st.button("Renderizar todos os slides como PNG", type="primary", use_container_width=True):
-    with st.spinner("Renderizando slides com Playwright..."):
+    with st.spinner("Renderizando slides..."):
         try:
             output_dir = str(
                 Path(__file__).parent.parent / "output" / "slides" / f"project_{project.id}"
@@ -151,7 +151,7 @@ if st.button("Renderizar todos os slides como PNG", type="primary", use_containe
             st.success(f"{len(paths)} slides renderizados!")
         except Exception as e:
             st.error(f"Erro na renderização: {e}")
-            st.info("Verifique se o Playwright está instalado: `playwright install chromium`")
+            st.info("Verifique os logs para mais detalhes.")
 
 # ── Exibir imagens renderizadas ──────────────────────────────────────────
 
