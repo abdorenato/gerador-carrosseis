@@ -18,6 +18,191 @@ from services.monoflow_generator import (
 init_db()
 conn = get_connection()
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# Funções auxiliares de renderização
+# ══════════════════════════════════════════════════════════════════════════
+
+def _render_platform_tab(platform: str, data: dict, icp):
+    """Renderiza o conteúdo de cada plataforma em sua tab."""
+    if platform == "reels":
+        _render_reels(data)
+    elif platform == "post":
+        _render_post(data)
+    elif platform == "carousel":
+        _render_carousel(data)
+    elif platform == "stories":
+        _render_stories(data)
+    elif platform == "linkedin":
+        _render_linkedin(data)
+    elif platform == "tiktok":
+        _render_tiktok(data)
+
+    st.text_area(
+        "📋 Conteúdo completo (copie daqui)",
+        value=_format_copy_text(platform, data),
+        height=200,
+        key=f"copy_{platform}",
+    )
+
+
+def _format_copy_text(platform: str, data: dict) -> str:
+    """Formata o conteúdo para fácil cópia."""
+    if platform == "reels":
+        lines = [f"🎬 ROTEIRO DE REELS — {data.get('title', '')}"]
+        lines.append(f"Duração: {data.get('duration', '')}")
+        lines.append(f"\n🪝 HOOK: {data.get('hook', '')}\n")
+        for scene in data.get("scenes", []):
+            lines.append(f"[{scene.get('time', '')}] {scene.get('action', '')}")
+            if scene.get("text_overlay"):
+                lines.append(f"   📝 Texto: {scene['text_overlay']}")
+        lines.append(f"\n📢 CTA: {data.get('cta', '')}")
+        lines.append(f"\n📝 LEGENDA:\n{data.get('caption', '')}")
+        lines.append(f"\n🎵 Áudio: {data.get('audio_suggestion', '')}")
+        return "\n".join(lines)
+    elif platform == "post":
+        lines = ["📸 POST INSTAGRAM\n"]
+        lines.append(data.get("caption", ""))
+        lines.append(f"\n#️⃣ {' '.join('#' + h for h in data.get('hashtags', []))}")
+        lines.append(f"\n⏰ Melhor horário: {data.get('best_time', '')}")
+        lines.append(f"🖼️ Imagem: {data.get('image_suggestion', '')}")
+        return "\n".join(lines)
+    elif platform == "carousel":
+        lines = ["🎠 CARROSSEL INSTAGRAM\n"]
+        for slide in data.get("slides", []):
+            lines.append(f"— Slide {slide.get('index', 0) + 1} ({slide.get('slide_type', '')}) —")
+            lines.append(f"  {slide.get('headline', '')}")
+            if slide.get("body"):
+                lines.append(f"  {slide['body']}")
+            lines.append("")
+        lines.append(f"📝 LEGENDA:\n{data.get('caption', '')}")
+        lines.append(f"\n#️⃣ {' '.join('#' + h for h in data.get('hashtags', []))}")
+        return "\n".join(lines)
+    elif platform == "stories":
+        lines = ["📱 SEQUÊNCIA DE STORIES\n"]
+        lines.append(f"Estratégia: {data.get('strategy', '')}\n")
+        for story in data.get("stories", []):
+            lines.append(f"— Story {story.get('order', '')} ({story.get('type', '')}) —")
+            lines.append(f"  {story.get('text', '')}")
+            sticker = story.get("sticker", {})
+            if sticker:
+                lines.append(f"  🏷️ {sticker.get('type', '')}: {sticker.get('question', '')}")
+                if sticker.get("options"):
+                    lines.append(f"     Opções: {' | '.join(sticker['options'])}")
+            lines.append(f"  🎨 Visual: {story.get('visual_tip', '')}")
+            lines.append("")
+        return "\n".join(lines)
+    elif platform == "linkedin":
+        lines = ["💼 POST LINKEDIN\n"]
+        lines.append(data.get("post", ""))
+        lines.append(f"\n#️⃣ {' '.join('#' + h for h in data.get('hashtags', []))}")
+        return "\n".join(lines)
+    elif platform == "tiktok":
+        lines = [f"🎵 ROTEIRO TIKTOK — {data.get('title', '')}"]
+        lines.append(f"Duração: {data.get('duration', '')}")
+        lines.append(f"\n🪝 HOOK: {data.get('hook', '')}\n")
+        for scene in data.get("scenes", []):
+            lines.append(f"[{scene.get('time', '')}] {scene.get('action', '')}")
+            if scene.get("text_overlay"):
+                lines.append(f"   📝 Texto: {scene['text_overlay']}")
+        lines.append(f"\n📢 CTA: {data.get('cta', '')}")
+        lines.append(f"\n📝 LEGENDA:\n{data.get('caption', '')}")
+        lines.append(f"\n🎵 Som: {data.get('sound_suggestion', '')}")
+        lines.append(f"💡 Dicas: {data.get('tiktok_tips', '')}")
+        return "\n".join(lines)
+    return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+def _render_reels(data: dict):
+    st.markdown(f"### 📹 {data.get('title', 'Reels')}")
+    st.markdown(f"**Duração:** {data.get('duration', '')}")
+    st.markdown(f"**🪝 Hook:** {data.get('hook', '')}")
+    st.markdown("**Cenas:**")
+    for scene in data.get("scenes", []):
+        with st.container():
+            cols = st.columns([1, 3, 2])
+            cols[0].markdown(f"`{scene.get('time', '')}`")
+            cols[1].markdown(scene.get("action", ""))
+            cols[2].markdown(f"📝 {scene.get('text_overlay', '')}")
+    st.markdown(f"**📢 CTA:** {data.get('cta', '')}")
+    st.markdown(f"**🎵 Áudio:** {data.get('audio_suggestion', '')}")
+    if data.get("trend_tip"):
+        st.info(f"💡 **Trend tip:** {data['trend_tip']}")
+
+
+def _render_post(data: dict):
+    st.markdown("### 📸 Post Instagram")
+    st.markdown(data.get("caption", ""))
+    if data.get("hashtags"):
+        st.markdown(f"**#️⃣** {' '.join('#' + h for h in data['hashtags'])}")
+    if data.get("best_time"):
+        st.markdown(f"**⏰ Melhor horário:** {data['best_time']}")
+    if data.get("image_suggestion"):
+        st.info(f"🖼️ **Sugestão de imagem:** {data['image_suggestion']}")
+
+
+def _render_carousel(data: dict):
+    st.markdown("### 🎠 Carrossel Instagram")
+    slides = data.get("slides", [])
+    if slides:
+        slide_tabs = st.tabs([f"Slide {s.get('index', 0) + 1}" for s in slides])
+        for tab, slide in zip(slide_tabs, slides):
+            with tab:
+                st.markdown(f"**Tipo:** {slide.get('slide_type', '')}")
+                st.markdown(f"### {slide.get('headline', '')}")
+                if slide.get("body"):
+                    st.markdown(slide["body"])
+    st.markdown("---")
+    st.markdown(f"**📝 Legenda:** {data.get('caption', '')}")
+    if data.get("hashtags"):
+        st.markdown(f"**#️⃣** {' '.join('#' + h for h in data['hashtags'])}")
+
+
+def _render_stories(data: dict):
+    st.markdown("### 📱 Stories Instagram")
+    if data.get("strategy"):
+        st.info(f"🎯 **Estratégia:** {data['strategy']}")
+    for story in data.get("stories", []):
+        with st.expander(f"Story {story.get('order', '')} — {story.get('type', '').upper()}", expanded=True):
+            st.markdown(story.get("text", ""))
+            sticker = story.get("sticker", {})
+            if sticker:
+                st.markdown(f"**🏷️ {sticker.get('type', '').upper()}:** {sticker.get('question', '')}")
+                if sticker.get("options"):
+                    for opt in sticker["options"]:
+                        st.markdown(f"  - {opt}")
+            if story.get("visual_tip"):
+                st.caption(f"🎨 {story['visual_tip']}")
+
+
+def _render_linkedin(data: dict):
+    st.markdown("### 💼 Post LinkedIn")
+    st.markdown(data.get("post", ""))
+    if data.get("hashtags"):
+        st.markdown(f"**#️⃣** {' '.join('#' + h for h in data['hashtags'])}")
+
+
+def _render_tiktok(data: dict):
+    st.markdown(f"### 🎵 {data.get('title', 'TikTok')}")
+    st.markdown(f"**Duração:** {data.get('duration', '')}")
+    st.markdown(f"**🪝 Hook:** {data.get('hook', '')}")
+    st.markdown("**Cenas:**")
+    for scene in data.get("scenes", []):
+        with st.container():
+            cols = st.columns([1, 3, 2])
+            cols[0].markdown(f"`{scene.get('time', '')}`")
+            cols[1].markdown(scene.get("action", ""))
+            cols[2].markdown(f"📝 {scene.get('text_overlay', '')}")
+    st.markdown(f"**📢 CTA:** {data.get('cta', '')}")
+    st.markdown(f"**🎵 Som sugerido:** {data.get('sound_suggestion', '')}")
+    if data.get("tiktok_tips"):
+        st.info(f"💡 **Dicas TikTok:** {data['tiktok_tips']}")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Página principal
+# ══════════════════════════════════════════════════════════════════════════
+
 st.title("🔄 Monoflow")
 st.caption("Um tema → múltiplos conteúdos para todas as plataformas")
 
@@ -269,194 +454,3 @@ if monoflow.get("mother_text"):
                 with tab:
                     data = contents[key]
                     _render_platform_tab(key, data, icp)
-
-
-def _render_platform_tab(platform: str, data: dict, icp):
-    """Renderiza o conteúdo de cada plataforma em sua tab."""
-
-    if platform == "reels":
-        _render_reels(data)
-    elif platform == "post":
-        _render_post(data)
-    elif platform == "carousel":
-        _render_carousel(data)
-    elif platform == "stories":
-        _render_stories(data)
-    elif platform == "linkedin":
-        _render_linkedin(data)
-    elif platform == "tiktok":
-        _render_tiktok(data)
-
-    # Botão copiar
-    copy_text = json.dumps(data, ensure_ascii=False, indent=2)
-    st.text_area(
-        "📋 Conteúdo completo (copie daqui)",
-        value=_format_copy_text(platform, data),
-        height=200,
-        key=f"copy_{platform}",
-    )
-
-
-def _format_copy_text(platform: str, data: dict) -> str:
-    """Formata o conteúdo para fácil cópia."""
-    if platform == "reels":
-        lines = [f"🎬 ROTEIRO DE REELS — {data.get('title', '')}"]
-        lines.append(f"Duração: {data.get('duration', '')}")
-        lines.append(f"\n🪝 HOOK: {data.get('hook', '')}\n")
-        for scene in data.get("scenes", []):
-            lines.append(f"[{scene.get('time', '')}] {scene.get('action', '')}")
-            if scene.get("text_overlay"):
-                lines.append(f"   📝 Texto: {scene['text_overlay']}")
-        lines.append(f"\n📢 CTA: {data.get('cta', '')}")
-        lines.append(f"\n📝 LEGENDA:\n{data.get('caption', '')}")
-        lines.append(f"\n🎵 Áudio: {data.get('audio_suggestion', '')}")
-        return "\n".join(lines)
-
-    elif platform == "post":
-        lines = ["📸 POST INSTAGRAM\n"]
-        lines.append(data.get("caption", ""))
-        lines.append(f"\n#️⃣ {' '.join('#' + h for h in data.get('hashtags', []))}")
-        lines.append(f"\n⏰ Melhor horário: {data.get('best_time', '')}")
-        lines.append(f"🖼️ Imagem: {data.get('image_suggestion', '')}")
-        return "\n".join(lines)
-
-    elif platform == "carousel":
-        lines = ["🎠 CARROSSEL INSTAGRAM\n"]
-        for slide in data.get("slides", []):
-            lines.append(f"— Slide {slide.get('index', 0) + 1} ({slide.get('slide_type', '')}) —")
-            lines.append(f"  {slide.get('headline', '')}")
-            if slide.get("body"):
-                lines.append(f"  {slide['body']}")
-            lines.append("")
-        lines.append(f"📝 LEGENDA:\n{data.get('caption', '')}")
-        lines.append(f"\n#️⃣ {' '.join('#' + h for h in data.get('hashtags', []))}")
-        return "\n".join(lines)
-
-    elif platform == "stories":
-        lines = ["📱 SEQUÊNCIA DE STORIES\n"]
-        lines.append(f"Estratégia: {data.get('strategy', '')}\n")
-        for story in data.get("stories", []):
-            lines.append(f"— Story {story.get('order', '')} ({story.get('type', '')}) —")
-            lines.append(f"  {story.get('text', '')}")
-            sticker = story.get("sticker", {})
-            if sticker:
-                lines.append(f"  🏷️ {sticker.get('type', '')}: {sticker.get('question', '')}")
-                if sticker.get("options"):
-                    lines.append(f"     Opções: {' | '.join(sticker['options'])}")
-            lines.append(f"  🎨 Visual: {story.get('visual_tip', '')}")
-            lines.append("")
-        return "\n".join(lines)
-
-    elif platform == "linkedin":
-        lines = ["💼 POST LINKEDIN\n"]
-        lines.append(data.get("post", ""))
-        lines.append(f"\n#️⃣ {' '.join('#' + h for h in data.get('hashtags', []))}")
-        return "\n".join(lines)
-
-    elif platform == "tiktok":
-        lines = [f"🎵 ROTEIRO TIKTOK — {data.get('title', '')}"]
-        lines.append(f"Duração: {data.get('duration', '')}")
-        lines.append(f"\n🪝 HOOK: {data.get('hook', '')}\n")
-        for scene in data.get("scenes", []):
-            lines.append(f"[{scene.get('time', '')}] {scene.get('action', '')}")
-            if scene.get("text_overlay"):
-                lines.append(f"   📝 Texto: {scene['text_overlay']}")
-        lines.append(f"\n📢 CTA: {data.get('cta', '')}")
-        lines.append(f"\n📝 LEGENDA:\n{data.get('caption', '')}")
-        lines.append(f"\n🎵 Som: {data.get('sound_suggestion', '')}")
-        lines.append(f"💡 Dicas: {data.get('tiktok_tips', '')}")
-        return "\n".join(lines)
-
-    return json.dumps(data, ensure_ascii=False, indent=2)
-
-
-def _render_reels(data: dict):
-    st.markdown(f"### 📹 {data.get('title', 'Reels')}")
-    st.markdown(f"**Duração:** {data.get('duration', '')}")
-    st.markdown(f"**🪝 Hook:** {data.get('hook', '')}")
-
-    st.markdown("**Cenas:**")
-    for scene in data.get("scenes", []):
-        with st.container():
-            cols = st.columns([1, 3, 2])
-            cols[0].markdown(f"`{scene.get('time', '')}`")
-            cols[1].markdown(scene.get("action", ""))
-            cols[2].markdown(f"📝 {scene.get('text_overlay', '')}")
-
-    st.markdown(f"**📢 CTA:** {data.get('cta', '')}")
-    st.markdown(f"**🎵 Áudio:** {data.get('audio_suggestion', '')}")
-    if data.get("trend_tip"):
-        st.info(f"💡 **Trend tip:** {data['trend_tip']}")
-
-
-def _render_post(data: dict):
-    st.markdown("### 📸 Post Instagram")
-    st.markdown(data.get("caption", ""))
-    if data.get("hashtags"):
-        st.markdown(f"**#️⃣** {' '.join('#' + h for h in data['hashtags'])}")
-    if data.get("best_time"):
-        st.markdown(f"**⏰ Melhor horário:** {data['best_time']}")
-    if data.get("image_suggestion"):
-        st.info(f"🖼️ **Sugestão de imagem:** {data['image_suggestion']}")
-
-
-def _render_carousel(data: dict):
-    st.markdown("### 🎠 Carrossel Instagram")
-    slides = data.get("slides", [])
-    if slides:
-        slide_tabs = st.tabs([f"Slide {s.get('index', 0) + 1}" for s in slides])
-        for tab, slide in zip(slide_tabs, slides):
-            with tab:
-                st.markdown(f"**Tipo:** {slide.get('slide_type', '')}")
-                st.markdown(f"### {slide.get('headline', '')}")
-                if slide.get("body"):
-                    st.markdown(slide["body"])
-
-    st.markdown("---")
-    st.markdown(f"**📝 Legenda:** {data.get('caption', '')}")
-    if data.get("hashtags"):
-        st.markdown(f"**#️⃣** {' '.join('#' + h for h in data['hashtags'])}")
-
-
-def _render_stories(data: dict):
-    st.markdown("### 📱 Stories Instagram")
-    if data.get("strategy"):
-        st.info(f"🎯 **Estratégia:** {data['strategy']}")
-
-    for story in data.get("stories", []):
-        with st.expander(f"Story {story.get('order', '')} — {story.get('type', '').upper()}", expanded=True):
-            st.markdown(story.get("text", ""))
-            sticker = story.get("sticker", {})
-            if sticker:
-                st.markdown(f"**🏷️ {sticker.get('type', '').upper()}:** {sticker.get('question', '')}")
-                if sticker.get("options"):
-                    for opt in sticker["options"]:
-                        st.markdown(f"  - {opt}")
-            if story.get("visual_tip"):
-                st.caption(f"🎨 {story['visual_tip']}")
-
-
-def _render_linkedin(data: dict):
-    st.markdown("### 💼 Post LinkedIn")
-    st.markdown(data.get("post", ""))
-    if data.get("hashtags"):
-        st.markdown(f"**#️⃣** {' '.join('#' + h for h in data['hashtags'])}")
-
-
-def _render_tiktok(data: dict):
-    st.markdown(f"### 🎵 {data.get('title', 'TikTok')}")
-    st.markdown(f"**Duração:** {data.get('duration', '')}")
-    st.markdown(f"**🪝 Hook:** {data.get('hook', '')}")
-
-    st.markdown("**Cenas:**")
-    for scene in data.get("scenes", []):
-        with st.container():
-            cols = st.columns([1, 3, 2])
-            cols[0].markdown(f"`{scene.get('time', '')}`")
-            cols[1].markdown(scene.get("action", ""))
-            cols[2].markdown(f"📝 {scene.get('text_overlay', '')}")
-
-    st.markdown(f"**📢 CTA:** {data.get('cta', '')}")
-    st.markdown(f"**🎵 Som sugerido:** {data.get('sound_suggestion', '')}")
-    if data.get("tiktok_tips"):
-        st.info(f"💡 **Dicas TikTok:** {data['tiktok_tips']}")
