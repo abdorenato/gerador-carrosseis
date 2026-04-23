@@ -1,7 +1,10 @@
 import streamlit as st
 from pathlib import Path
 
+from utils.auth_guard import require_login
+
 st.set_page_config(page_title="Settings", page_icon="⚙️", layout="wide")
+require_login()
 st.title("Configurações")
 
 ENV_PATH = Path(__file__).parent.parent / ".env"

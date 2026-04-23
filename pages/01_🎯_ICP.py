@@ -6,7 +6,10 @@ from db import repositories as repo
 from db.models import ICP
 from typing import Optional
 
+from utils.auth_guard import require_login
+
 st.set_page_config(page_title="ICP", page_icon="🎯", layout="wide")
+require_login()
 st.title("Perfil de Cliente Ideal (ICP)")
 
 init_db()

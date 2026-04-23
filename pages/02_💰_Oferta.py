@@ -10,7 +10,10 @@ from services.content_generator import (
     generate_offer_summary,
 )
 
+from utils.auth_guard import require_login
+
 st.set_page_config(page_title="Oferta", page_icon="💰", layout="wide")
+require_login()
 st.title("Construção de Oferta Irresistível")
 
 init_db()

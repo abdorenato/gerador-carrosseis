@@ -10,7 +10,10 @@ from db import repositories as repo
 from db.models import SlideContent
 from services.renderer import render_carousel, get_available_styles
 
+from utils.auth_guard import require_login
+
 st.set_page_config(page_title="Design", page_icon="🎨", layout="wide")
+require_login()
 st.title("Design do Carrossel")
 
 init_db()

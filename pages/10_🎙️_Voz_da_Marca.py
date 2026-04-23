@@ -23,14 +23,10 @@ from services.voz_generator import (
 )
 
 
-st.set_page_config(page_title="Voz da Marca — iAbdo", page_icon="🎙️", layout="wide")
+from utils.auth_guard import require_login
 
-# ── Proteção de login ──
-user = st.session_state.get("user")
-if not user:
-    st.warning("Ei, antes de entrar aqui, me conta quem é você. Volta pra tela inicial.")
-    st.page_link("app.py", label="← Voltar pra entrada", icon="🚀")
-    st.stop()
+st.set_page_config(page_title="Voz da Marca — iAbdo", page_icon="🎙️", layout="wide")
+user = require_login()
 
 # ── Estado da voz (carrega do Supabase se existir) ──
 voz_state = st.session_state.setdefault("voz_state", {"step": "perguntas", "answers": {}, "result": None})

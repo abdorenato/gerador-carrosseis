@@ -25,6 +25,20 @@ st.set_page_config(
 init_db()
 conn = get_connection()
 
+# Esconde o menu lateral de páginas enquanto o usuário não está logado.
+# As páginas individuais ainda são protegidas pelo check st.session_state["user"],
+# mas isso evita que apareçam visíveis no menu.
+if not st.session_state.get("user"):
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebarNav"], [data-testid="stSidebarNavItems"] { display: none !important; }
+        [data-testid="stSidebar"] > div:first-child { padding-top: 0; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 # ═══════════════════════════════════════════════════════════════════════════
 # TELA DE LOGIN (iAbdo)
 # ═══════════════════════════════════════════════════════════════════════════

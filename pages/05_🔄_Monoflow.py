@@ -21,6 +21,9 @@ from services.monoflow_generator import (
 )
 from services.image_service import search_unsplash, download_image
 from services.renderer import render_carousel, get_available_styles
+from utils.auth_guard import require_login
+
+require_login()
 
 init_db()
 conn = get_connection()

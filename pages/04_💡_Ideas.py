@@ -5,7 +5,10 @@ from db.database import init_db, get_connection
 from db import repositories as repo
 from services.content_generator import generate_ideas
 
+from utils.auth_guard import require_login
+
 st.set_page_config(page_title="Ideas", page_icon="💡", layout="wide")
+require_login()
 st.title("Geração de Ideias")
 
 init_db()

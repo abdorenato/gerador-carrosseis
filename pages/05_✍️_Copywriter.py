@@ -6,7 +6,10 @@ from db import repositories as repo
 from db.models import CarouselProject, SlideContent
 from services.content_generator import write_carousel_copy, refine_slide, generate_caption
 
+from utils.auth_guard import require_login
+
 st.set_page_config(page_title="Copywriter", page_icon="✍️", layout="wide")
+require_login()
 st.title("Copywriter de Carrossel")
 
 init_db()
