@@ -1,14 +1,14 @@
 """Growth Studio — tela de entrada com iAbdo.
 
-Tela inicial:
-- Se não tem sessão ativa: mostra o iAbdo se apresentando + formulário de login
-- Se tem sessão: mostra dashboard de progresso + atalhos pras etapas
+Usa st.navigation para controlar o menu lateral em wizard progressivo:
+- Antes do login: só a tela de entrada
+- Após login: grupos (Conteúdo → Produto → Sistema)
+- Cada próxima página só libera após a anterior ser completada
 """
 
 import streamlit as st
 
 from db.database import init_db, get_connection
-from db import repositories as repo
 from services.supabase_service import (
     register_lead,
     is_configured as supabase_configured,
@@ -25,29 +25,24 @@ st.set_page_config(
 init_db()
 conn = get_connection()
 
-# Esconde o menu lateral de páginas enquanto o usuário não está logado.
-# As páginas individuais ainda são protegidas pelo check st.session_state["user"],
-# mas isso evita que apareçam visíveis no menu.
-if not st.session_state.get("user"):
-    st.markdown(
-        """
-        <style>
-        [data-testid="stSidebarNav"], [data-testid="stSidebarNavItems"] { display: none !important; }
-        [data-testid="stSidebar"] > div:first-child { padding-top: 0; }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
 
 # ═══════════════════════════════════════════════════════════════════════════
 # TELA DE LOGIN (iAbdo)
 # ═══════════════════════════════════════════════════════════════════════════
 
-def _show_login():
+def render_login():
     """Tela de entrada com iAbdo se apresentando."""
-    st.sidebar.empty()  # limpa sidebar na tela de login
+    # Esconde sidebar na tela de login
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"] { display: none !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    col_left, col_main, col_right = st.columns([1, 3, 1])
+    _, col_main, _ = st.columns([1, 3, 1])
 
     with col_main:
         st.markdown(
@@ -62,14 +57,13 @@ def _show_login():
             """,
             unsafe_allow_html=True,
         )
-
         st.markdown("---")
 
         st.markdown(
             """
             ### 👋 Oi, eu sou o **iAbdo**.
 
-            Sou o agente que vai te guiar em **6 passos** pra você sair daqui com:
+            Vou te guiar pra você sair daqui com:
 
             - 🎙️ Sua **voz autêntica** definida (arquétipo + mapa de voz)
             - 📍 Um **posicionamento** claro em 1 frase
@@ -91,8 +85,8 @@ def _show_login():
                 "Seu @ do Instagram (opcional)", placeholder="@seuinsta"
             )
 
-            col_btn1, col_btn2 = st.columns([1, 1])
-            with col_btn2:
+            _, col_btn = st.columns([1, 1])
+            with col_btn:
                 submit = st.form_submit_button(
                     "🚀 Começar minha jornada",
                     type="primary",
@@ -103,25 +97,19 @@ def _show_login():
             if not name.strip() or not email.strip():
                 st.error("Preciso do seu nome e email pra começar.")
                 return
-
             if "@" not in email:
                 st.error("Esse email não parece válido. Dá uma olhadinha.")
                 return
 
-            # Normalizar instagram
             ig = instagram.strip().lstrip("@") if instagram else ""
 
-            # Registra no Supabase e recupera user_id
             user_record = None
             if supabase_configured():
                 try:
-                    user_record = register_lead(
-                        name.strip(), email.strip().lower(), ig
-                    )
+                    user_record = register_lead(name.strip(), email.strip().lower(), ig)
                 except Exception as e:
                     st.warning(f"Não consegui salvar no banco: {e}. Seguindo em modo local.")
 
-            # Salva na sessão (com id do Supabase se disponível)
             st.session_state["user"] = {
                 "id": user_record.get("id") if user_record else None,
                 "name": name.strip(),
@@ -129,7 +117,6 @@ def _show_login():
                 "instagram": ig,
             }
 
-            # Carrega progresso existente (caso esteja retornando)
             if user_record:
                 try:
                     st.session_state["progress"] = get_full_progress(user_record["id"])
@@ -140,53 +127,26 @@ def _show_login():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# DASHBOARD (logado)
+# DASHBOARD (Home após login)
 # ═══════════════════════════════════════════════════════════════════════════
 
-STEPS = [
-    {"key": "voz", "icon": "🎙️", "title": "Voz da Marca", "page": "pages/10_🎙️_Voz_da_Marca.py"},
-    {"key": "posicionamento", "icon": "📍", "title": "Posicionamento", "page": None},
-    {"key": "territorio", "icon": "🗺️", "title": "Território", "page": None},
-    {"key": "editorias", "icon": "📚", "title": "Editorias", "page": None},
-    {"key": "icp", "icon": "🎯", "title": "ICP", "page": "pages/01_🎯_ICP.py"},
-    {"key": "oferta", "icon": "💰", "title": "Oferta", "page": "pages/02_💰_Oferta.py"},
-    {"key": "pitch", "icon": "🎤", "title": "Pitch", "page": "pages/03_🎤_Pitch.py"},
-    {"key": "ideias", "icon": "💡", "title": "Ideias", "page": "pages/04_💡_Ideas.py"},
-    {"key": "monoflow", "icon": "🔄", "title": "Monoflow", "page": "pages/05_🔄_Monoflow.py"},
-]
-
-
-def _show_sidebar(user: dict):
-    """Sidebar com perfil + mapa de progresso."""
-    st.sidebar.markdown(f"### 👤 {user['name']}")
-    st.sidebar.caption(user["email"])
-    if user.get("instagram"):
-        st.sidebar.caption(f"@{user['instagram']}")
-
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🗺️ Sua jornada")
-
+def render_dashboard():
+    """Dashboard principal com saudação do iAbdo e próximos passos."""
+    user = st.session_state["user"]
     progress = st.session_state.get("progress", {})
-    completed = sum(1 for s in STEPS if progress.get(s["key"]))
-    pct = int((completed / len(STEPS)) * 100)
 
-    st.sidebar.progress(pct / 100, text=f"{completed}/{len(STEPS)} etapas ({pct}%)")
-    st.sidebar.markdown("")
+    # Sidebar: perfil + logout
+    with st.sidebar:
+        st.markdown(f"### 👤 {user['name']}")
+        st.caption(user["email"])
+        if user.get("instagram"):
+            st.caption(f"@{user['instagram']}")
+        st.markdown("---")
+        if st.button("Sair", use_container_width=True):
+            st.session_state.clear()
+            st.rerun()
 
-    for step in STEPS:
-        done = progress.get(step["key"], False)
-        marker = "✅" if done else "⚪"
-        st.sidebar.markdown(f"{marker} {step['icon']} {step['title']}")
-
-    st.sidebar.markdown("---")
-
-    if st.sidebar.button("Sair", use_container_width=True):
-        st.session_state.clear()
-        st.rerun()
-
-
-def _show_dashboard(user: dict):
-    """Dashboard principal com saudação do iAbdo e atalhos."""
+    # Header
     st.markdown(
         f"""
         <div style="padding: 20px 0 10px 0;">
@@ -198,50 +158,111 @@ def _show_dashboard(user: dict):
         """,
         unsafe_allow_html=True,
     )
-
     st.markdown("---")
 
-    progress = st.session_state.get("progress", {})
-    first_undone = next((s for s in STEPS if not progress.get(s["key"])), None)
-
-    if first_undone:
-        st.markdown(f"### 🎯 Próximo passo: {first_undone['icon']} {first_undone['title']}")
-        if first_undone["page"]:
-            st.markdown(
-                f"Comece por aqui para dar o próximo passo na sua jornada."
-            )
-            if st.button(f"Ir para {first_undone['title']} →", type="primary"):
-                st.switch_page(first_undone["page"])
-        else:
-            st.info(f"Estamos trabalhando na etapa **{first_undone['title']}**. Em breve!")
+    # Próximo passo sugerido
+    if not progress.get("voz"):
+        next_step = ("🎙️", "Voz da Marca", "Tudo começa descobrindo como você soa de verdade.")
+    elif not progress.get("posicionamento"):
+        next_step = ("📍", "Posicionamento", "Em breve — vou te ajudar a cravar sua frase de posicionamento.")
+    elif not progress.get("territorio"):
+        next_step = ("🗺️", "Território", "Em breve — definir o território principal de conteúdo.")
+    elif not progress.get("editorias"):
+        next_step = ("📚", "Editorias", "Em breve — macro-temas do seu território.")
+    elif not progress.get("ideias"):
+        next_step = ("💡", "Ideias", "Bora gerar ideias a partir das suas editorias.")
     else:
-        st.success("🎉 Você completou todas as etapas! Bora gerar conteúdo?")
+        next_step = ("🔄", "Monoflow", "Transformar ideias em conteúdos pra todas as plataformas.")
+
+    st.markdown(f"### 🎯 Próximo passo: {next_step[0]} {next_step[1]}")
+    st.markdown(next_step[2])
+    st.markdown("")
+
+    # Progresso geral
+    total_steps = 6  # voz, posicionamento, territorio, editorias, ideias, monoflow
+    completed = sum(1 for k in ["voz", "posicionamento", "territorio", "editorias", "ideias", "conteudos"] if progress.get(k))
+    pct = int((completed / total_steps) * 100)
+    st.progress(pct / 100, text=f"Progresso: {completed}/{total_steps} etapas ({pct}%)")
 
     st.markdown("---")
-    st.markdown("### 🧭 Todas as etapas")
+    st.markdown(
+        """
+        ### 🧭 Como navegar
 
-    cols = st.columns(3)
-    for i, step in enumerate(STEPS):
-        with cols[i % 3]:
-            done = progress.get(step["key"], False)
-            marker = "✅" if done else "⚪"
-            with st.container(border=True):
-                st.markdown(f"#### {step['icon']} {step['title']} {marker}")
-                if step["page"]:
-                    if st.button(f"Abrir", key=f"open_{step['key']}", use_container_width=True):
-                        st.switch_page(step["page"])
-                else:
-                    st.caption("Em breve")
+        No menu lateral você vê os 3 grupos:
+
+        - **✨ Conteúdo** — sua voz, editorias, ideias e geração de conteúdo
+        - **📦 Produto** — ICP, Oferta e Pitch (para quando for oferecer algo)
+        - **⚙️ Sistema** — configurações
+
+        Eu vou **liberar as etapas à medida que você for completando**. Bora pelo primeiro passo?
+        """
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ROTEAMENTO
+# ROTEAMENTO COM ST.NAVIGATION
 # ═══════════════════════════════════════════════════════════════════════════
 
 user = st.session_state.get("user")
 
 if not user:
-    _show_login()
+    # Antes do login: só a tela de entrada
+    pg = st.navigation([st.Page(render_login, title="Entrada", default=True, icon="🚀")])
 else:
-    _show_sidebar(user)
-    _show_dashboard(user)
+    progress = st.session_state.get("progress", {})
+
+    # ── Início (sempre disponível) ──
+    home_pages = [st.Page(render_dashboard, title="Início", default=True, icon="🏠")]
+
+    # ── ✨ Conteúdo (wizard progressivo) ──
+    content_pages = []
+    # 1. Voz da Marca — sempre disponível (primeiro passo)
+    content_pages.append(
+        st.Page("pages/10_🎙️_Voz_da_Marca.py", title="Voz da Marca", icon="🎙️")
+    )
+    # 2. Posicionamento, Território, Editorias — em breve (ainda não implementados)
+    # 3. Ideias — libera após Voz
+    if progress.get("voz"):
+        content_pages.append(
+            st.Page("pages/04_💡_Ideas.py", title="Ideias", icon="💡")
+        )
+    # 4. Monoflow — libera após Voz também (pra dar flexibilidade)
+    if progress.get("voz"):
+        content_pages.append(
+            st.Page("pages/05_🔄_Monoflow.py", title="Monoflow", icon="🔄")
+        )
+
+    # ── 📦 Produto (wizard progressivo) ──
+    product_pages = []
+    # 1. ICP — sempre disponível (primeiro passo do Produto)
+    product_pages.append(
+        st.Page("pages/01_🎯_ICP.py", title="ICP", icon="🎯")
+    )
+    # 2. Oferta — libera após ICP
+    if progress.get("icp"):
+        product_pages.append(
+            st.Page("pages/02_💰_Oferta.py", title="Oferta", icon="💰")
+        )
+    # 3. Pitch — libera após Oferta
+    if progress.get("oferta"):
+        product_pages.append(
+            st.Page("pages/03_🎤_Pitch.py", title="Pitch", icon="🎤")
+        )
+
+    # ── ⚙️ Sistema (sempre disponível) ──
+    system_pages = [
+        st.Page("pages/08_⚙️_Settings.py", title="Configurações", icon="⚙️"),
+    ]
+
+    # Monta navegação agrupada (ordem: Conteúdo vem antes de Produto)
+    pg = st.navigation(
+        {
+            "🏠 Início": home_pages,
+            "✨ Conteúdo": content_pages,
+            "📦 Produto": product_pages,
+            "⚙️ Sistema": system_pages,
+        }
+    )
+
+pg.run()

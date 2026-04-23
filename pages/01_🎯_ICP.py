@@ -133,6 +133,8 @@ def _show_form(icp: ICP | None = None):
                     tone_keywords=tone_keywords,
                 )
                 repo.create_icp(conn, new_icp)
+                # Marca progresso para desbloquear Oferta
+                st.session_state.setdefault("progress", {})["icp"] = True
                 st.success(f"ICP '{name}' criado!")
                 st.rerun()
 
@@ -140,6 +142,10 @@ def _show_form(icp: ICP | None = None):
 # ── Lista de ICPs ────────────────────────────────────────────────────────
 
 icps = repo.list_icps(conn)
+
+# Se já tem ICPs, marca progresso como feito
+if icps:
+    st.session_state.setdefault("progress", {})["icp"] = True
 
 if icps:
     st.subheader(f"ICPs cadastrados ({len(icps)})")

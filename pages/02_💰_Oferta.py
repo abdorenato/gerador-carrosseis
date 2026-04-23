@@ -413,6 +413,8 @@ elif st.session_state["offer_step"] == "review":
             else:
                 new_id = repo.create_offer(conn, offer)
                 offer.id = new_id
+                # Marca progresso para desbloquear Pitch
+                st.session_state.setdefault("progress", {})["oferta"] = True
                 st.success("Oferta salva!")
 
             st.session_state["active_offer"] = offer
@@ -450,6 +452,10 @@ st.markdown("---")
 st.subheader("Ofertas salvas")
 
 offers = repo.list_offers_by_icp(conn, icp.id)
+
+# Se já tem ofertas, marca progresso como feito
+if offers:
+    st.session_state.setdefault("progress", {})["oferta"] = True
 
 if not offers:
     st.info("Nenhuma oferta salva para este ICP.")
