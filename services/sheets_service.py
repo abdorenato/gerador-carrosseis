@@ -1,4 +1,20 @@
-"""Serviço de integração com Google Sheets para captação de leads."""
+"""Serviço de integração com Google Sheets para captação de leads.
+
+Colunas esperadas na planilha (linha 1):
+A: timestamp_inicio
+B: nome
+C: email
+D: instagram
+E: ultima_atividade
+F: progresso
+G: voz_arquetipo
+H: voz_frase_essencia
+I: posicionamento
+J: territorio
+K: num_editorias
+L: num_ideias
+M: num_conteudos
+"""
 
 from __future__ import annotations
 
@@ -8,11 +24,26 @@ from typing import Optional
 import streamlit as st
 
 
-def _get_credentials():
-    """Carrega credenciais da Service Account do Google Cloud.
+# Mapeamento de colunas (1-indexed para gspread)
+COLUMNS = {
+    "timestamp_inicio": 1,
+    "nome": 2,
+    "email": 3,
+    "instagram": 4,
+    "ultima_atividade": 5,
+    "progresso": 6,
+    "voz_arquetipo": 7,
+    "voz_frase_essencia": 8,
+    "posicionamento": 9,
+    "territorio": 10,
+    "num_editorias": 11,
+    "num_ideias": 12,
+    "num_conteudos": 13,
+}
 
-    Espera em st.secrets["gcp_service_account"] um dict com o JSON da key.
-    """
+
+def _get_credentials():
+    """Carrega credenciais da Service Account do Google Cloud."""
     try:
         from google.oauth2.service_account import Credentials
     except ImportError:
@@ -63,55 +94,143 @@ def is_configured() -> bool:
     return _get_worksheet() is not None
 
 
-def register_lead(name: str, email: str, instagram: str = "") -> bool:
-    """Registra um lead novo no Google Sheets.
+def _find_row_by_email(ws, email: str) -> Optional[int]:
+    """Retorna o número da linha do lead pelo email, ou None."""
+    try:
+        cell = ws.find(email, in_column=COLUMNS["email"])
+        return cell.row if cell else None
+    except Exception:
+        return None
 
-    Retorna True se registrou com sucesso, False se não está configurado
-    ou se falhou.
+
+def register_lead(name: str, email: str, instagram: str = "") -> bool:
+    """Registra um lead novo ou atualiza nome/@ se já existir."""
+    ws = _get_worksheet()
+    if not ws:
+        return False
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        row = _find_row_by_email(ws, email)
+        if row:
+            # Já existe: atualiza última atividade
+            ws.update_cell(row, COLUMNS["ultima_atividade"], now)
+            return True
+
+        # Novo: insere linha com 13 colunas (resto vazio)
+        new_row = [""] * len(COLUMNS)
+        new_row[COLUMNS["timestamp_inicio"] - 1] = now
+        new_row[COLUMNS["nome"] - 1] = name
+        new_row[COLUMNS["email"] - 1] = email
+        new_row[COLUMNS["instagram"] - 1] = instagram
+        new_row[COLUMNS["ultima_atividade"] - 1] = now
+        new_row[COLUMNS["progresso"] - 1] = "0/6"
+
+        ws.append_row(new_row, value_input_option="USER_ENTERED")
+        return True
+    except Exception:
+        return False
+
+
+def _update_cells(email: str, updates: dict) -> bool:
+    """Atualiza múltiplas colunas de um lead pelo email.
+
+    updates = {"voz_arquetipo": "Especialista", "progresso": "1/6"}
+    Também atualiza ultima_atividade automaticamente.
     """
     ws = _get_worksheet()
     if not ws:
         return False
 
     try:
-        # Verifica se já existe pelo email
-        try:
-            existing = ws.find(email, in_column=3)  # coluna email
-            if existing:
-                return True  # já cadastrado, ignora silenciosamente
-        except Exception:
-            pass
+        row = _find_row_by_email(ws, email)
+        if not row:
+            return False
 
-        ws.append_row(
-            [
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                name,
-                email,
-                instagram,
-                "Iniciou",  # progresso
-                "",  # voz_arquetipo
-            ],
-            value_input_option="USER_ENTERED",
-        )
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        updates = {**updates, "ultima_atividade": now}
+
+        # Monta batch update
+        cells_to_update = []
+        for col_name, value in updates.items():
+            col_idx = COLUMNS.get(col_name)
+            if col_idx:
+                cells_to_update.append({
+                    "range": f"{_col_letter(col_idx)}{row}",
+                    "values": [[str(value)]],
+                })
+
+        if cells_to_update:
+            ws.batch_update(cells_to_update, value_input_option="USER_ENTERED")
         return True
     except Exception:
         return False
 
+
+def _col_letter(col_idx: int) -> str:
+    """Converte índice de coluna (1-based) para letra (A, B, ... Z, AA, ...)."""
+    result = ""
+    while col_idx > 0:
+        col_idx, rem = divmod(col_idx - 1, 26)
+        result = chr(65 + rem) + result
+    return result
+
+
+# ─── Funções públicas por etapa ────────────────────────────────────────────
 
 def update_progress(email: str, progress: str, voz_arquetipo: str = "") -> bool:
-    """Atualiza o progresso de um lead já cadastrado."""
-    ws = _get_worksheet()
-    if not ws:
-        return False
+    """Update genérico (compatibilidade). Use as funções específicas abaixo."""
+    updates = {"progresso": progress}
+    if voz_arquetipo:
+        updates["voz_arquetipo"] = voz_arquetipo
+    return _update_cells(email, updates)
 
-    try:
-        cell = ws.find(email, in_column=3)
-        if not cell:
-            return False
-        row = cell.row
-        ws.update_cell(row, 5, progress)  # coluna E (progresso)
-        if voz_arquetipo:
-            ws.update_cell(row, 6, voz_arquetipo)  # coluna F
-        return True
-    except Exception:
-        return False
+
+def track_voz(email: str, arquetipo: str, frase_essencia: str) -> bool:
+    """Marca que o usuário completou Voz da Marca."""
+    return _update_cells(email, {
+        "voz_arquetipo": arquetipo,
+        "voz_frase_essencia": frase_essencia,
+        "progresso": "1/6",
+    })
+
+
+def track_posicionamento(email: str, frase: str) -> bool:
+    """Marca que o usuário completou Posicionamento."""
+    return _update_cells(email, {
+        "posicionamento": frase,
+        "progresso": "2/6",
+    })
+
+
+def track_territorio(email: str, territorio: str) -> bool:
+    """Marca que o usuário completou Território."""
+    return _update_cells(email, {
+        "territorio": territorio,
+        "progresso": "3/6",
+    })
+
+
+def track_editorias(email: str, count: int) -> bool:
+    """Marca que o usuário criou editorias."""
+    return _update_cells(email, {
+        "num_editorias": count,
+        "progresso": "4/6",
+    })
+
+
+def track_ideias(email: str, count: int) -> bool:
+    """Marca quantas ideias foram geradas."""
+    return _update_cells(email, {
+        "num_ideias": count,
+        "progresso": "5/6",
+    })
+
+
+def track_conteudos(email: str, count: int) -> bool:
+    """Marca quantos conteúdos foram gerados no Monoflow."""
+    return _update_cells(email, {
+        "num_conteudos": count,
+        "progresso": "6/6",
+    })

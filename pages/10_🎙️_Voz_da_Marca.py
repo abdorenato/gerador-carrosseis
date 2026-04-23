@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from services.sheets_service import update_progress, is_configured as sheets_configured
+from services.sheets_service import track_voz, is_configured as sheets_configured
 from services.voz_generator import (
     ARCHETYPES,
     DISCOVERY_QUESTIONS,
@@ -103,8 +103,9 @@ if voz_state["step"] == "perguntas":
                     if sheets_configured():
                         arq = result.get("arquetipo_primario", "")
                         arq_name = ARCHETYPES.get(arq, {}).get("name", arq)
+                        frase_ess = result.get("mapa_voz", {}).get("frase_essencia", "")
                         try:
-                            update_progress(user["email"], "Voz descoberta", arq_name)
+                            track_voz(user["email"], arq_name, frase_ess)
                         except Exception:
                             pass
 
