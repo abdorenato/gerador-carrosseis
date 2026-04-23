@@ -9,7 +9,11 @@ import streamlit as st
 
 from db.database import init_db, get_connection
 from db import repositories as repo
-from services.sheets_service import register_lead, is_configured as sheets_configured
+from services.supabase_service import (
+    register_lead,
+    is_configured as supabase_configured,
+    get_full_progress,
+)
 
 st.set_page_config(
     page_title="Growth Studio — iAbdo",
@@ -93,19 +97,30 @@ def _show_login():
             # Normalizar instagram
             ig = instagram.strip().lstrip("@") if instagram else ""
 
-            # Salva na sessão
+            # Registra no Supabase e recupera user_id
+            user_record = None
+            if supabase_configured():
+                try:
+                    user_record = register_lead(
+                        name.strip(), email.strip().lower(), ig
+                    )
+                except Exception as e:
+                    st.warning(f"Não consegui salvar no banco: {e}. Seguindo em modo local.")
+
+            # Salva na sessão (com id do Supabase se disponível)
             st.session_state["user"] = {
+                "id": user_record.get("id") if user_record else None,
                 "name": name.strip(),
                 "email": email.strip().lower(),
                 "instagram": ig,
             }
 
-            # Registra no Google Sheets
-            if sheets_configured():
+            # Carrega progresso existente (caso esteja retornando)
+            if user_record:
                 try:
-                    register_lead(name.strip(), email.strip().lower(), ig)
+                    st.session_state["progress"] = get_full_progress(user_record["id"])
                 except Exception:
-                    pass  # não bloqueia o fluxo
+                    pass
 
             st.rerun()
 

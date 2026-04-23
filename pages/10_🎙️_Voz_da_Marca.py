@@ -11,7 +11,11 @@ from __future__ import annotations
 
 import streamlit as st
 
-from services.sheets_service import track_voz, is_configured as sheets_configured
+from services.supabase_service import (
+    save_voz,
+    get_voz,
+    is_configured as supabase_configured,
+)
 from services.voz_generator import (
     ARCHETYPES,
     DISCOVERY_QUESTIONS,
@@ -28,8 +32,25 @@ if not user:
     st.page_link("app.py", label="← Voltar pra entrada", icon="🚀")
     st.stop()
 
-# ── Estado da voz ──
+# ── Estado da voz (carrega do Supabase se existir) ──
 voz_state = st.session_state.setdefault("voz_state", {"step": "perguntas", "answers": {}, "result": None})
+
+# Se é a primeira vez entrando na página e temos user_id, tenta carregar do banco
+if not voz_state.get("loaded_from_db") and user.get("id") and supabase_configured():
+    voz_state["loaded_from_db"] = True
+    try:
+        existing = get_voz(user["id"])
+        if existing and existing.get("arquetipo_primario"):
+            voz_state["answers"] = existing.get("respostas") or {}
+            voz_state["result"] = {
+                "arquetipo_primario": existing["arquetipo_primario"],
+                "arquetipo_secundario": existing.get("arquetipo_secundario"),
+                "justificativa": existing.get("justificativa", ""),
+                "mapa_voz": existing.get("mapa_voz") or {},
+            }
+            voz_state["step"] = "revisao"
+    except Exception:
+        pass
 
 # ── Header ──
 st.markdown(
@@ -98,17 +119,6 @@ if voz_state["step"] == "perguntas":
                     result = descobrir_voz(answers)
                     voz_state["result"] = result
                     voz_state["step"] = "revisao"
-
-                    # Atualiza progresso no Sheets
-                    if sheets_configured():
-                        arq = result.get("arquetipo_primario", "")
-                        arq_name = ARCHETYPES.get(arq, {}).get("name", arq)
-                        frase_ess = result.get("mapa_voz", {}).get("frase_essencia", "")
-                        try:
-                            track_voz(user["email"], arq_name, frase_ess)
-                        except Exception:
-                            pass
-
                     st.rerun()
                 except Exception as e:
                     st.error(f"Deu ruim na análise: {e}")
@@ -188,7 +198,21 @@ elif voz_state["step"] == "revisao":
                     st.error(f"Erro: {e}")
     with col3:
         if st.button("✅ Essa é minha voz", type="primary", use_container_width=True):
-            # Salva como completa
+            # Salva no Supabase
+            saved = False
+            if user.get("id") and supabase_configured():
+                try:
+                    saved = save_voz(user["id"], {
+                        "arquetipo_primario": prim_key,
+                        "arquetipo_secundario": sec_key,
+                        "justificativa": result.get("justificativa", ""),
+                        "mapa_voz": mapa,
+                        "respostas": voz_state["answers"],
+                    })
+                except Exception as e:
+                    st.warning(f"Salvei na sessão mas falhou no banco: {e}")
+
+            # Salva na sessão
             st.session_state.setdefault("progress", {})["voz"] = True
             st.session_state["voz_salva"] = {
                 "arquetipo_primario": prim_key,
@@ -196,7 +220,10 @@ elif voz_state["step"] == "revisao":
                 "mapa_voz": mapa,
                 "justificativa": result.get("justificativa", ""),
             }
-            st.success("🎉 Voz salva! Vamos pro próximo passo.")
+            if saved:
+                st.success("🎉 Voz salva no banco! Vamos pro próximo passo.")
+            else:
+                st.success("🎉 Voz salva! (apenas na sessão)")
             st.balloons()
 
     # ── Edição manual do mapa (opcional) ──
